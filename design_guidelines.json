@@ -1,0 +1,152 @@
+{
+  "theme": "light_and_dark",
+  "archetype": "THE PERFORMANCE PRO",
+  "typography": {
+    "headings": {
+      "family": "Chivo, sans-serif",
+      "weights": ["700", "900"],
+      "rules": [
+        "DO NOT use Inter or generic sans for headings.",
+        "Use tight letter spacing (tracking-tight or tracking-tighter) for sizes > 32px.",
+        "Line height must be leading-none for headers."
+      ]
+    },
+    "body": {
+      "family": "DM Sans, sans-serif",
+      "weights": ["400", "500", "600"],
+      "rules": [
+        "Line height must be leading-relaxed for better legibility of data grids."
+      ]
+    },
+    "labels_and_badges": {
+      "rules": [
+        "Overlines and labels MUST be uppercase, text-xs, with wide spacing (tracking-[0.2em])."
+      ]
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#FFFFFF",
+      "surface": "#F9FAFB",
+      "border": "#E5E7EB",
+      "text_primary": "#0A0A0A",
+      "text_secondary": "#52525B"
+    },
+    "dark": {
+      "background": "#0A0A0A",
+      "surface": "#18181B",
+      "border": "#27272A",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#A1A1AA"
+    },
+    "brand_accents": {
+      "primary": "#FF3B30", 
+      "primary_hover": "#D32F2F",
+      "description": "Electric Blaze for kinetic triggers, progress bars, and main CTAs."
+    },
+    "status": {
+      "ACTIVE": { "bg": "bg-green-500/10", "text": "text-green-700 dark:text-green-400", "border": "border-green-500/20" },
+      "PAST_DUE": { "bg": "bg-orange-500/10", "text": "text-orange-700 dark:text-orange-400", "border": "border-orange-500/20" },
+      "SUSPENDED": { "bg": "bg-red-500/10", "text": "text-red-700 dark:text-red-400", "border": "border-red-500/20" },
+      "CANCELLED": { "bg": "bg-zinc-500/10", "text": "text-zinc-700 dark:text-zinc-400", "border": "border-zinc-500/20" }
+    },
+    "rules": [
+      "Avoid vibrating lime. Use Electric Blaze (#FF3B30) as the kinetic trigger.",
+      "NEVER use teal green or teal blue (#1B93A4) for this dashboard.",
+      "Text visibility must meet APCA contrast standards."
+    ]
+  },
+  "layouts": {
+    "strategy": "High Density Grid (Mode B)",
+    "rules": [
+      "Base Grid: grid-cols-1 md:grid-cols-3 lg:grid-cols-4 for KPI metrics.",
+      "Gap Strategy: Tight (gap-4 or gap-6).",
+      "Summary widgets span col-span-1.",
+      "Primary charts span col-span-2 or col-span-3.",
+      "Every pixel utilized; use h-full on children to match neighbor heights."
+    ],
+    "shell": {
+      "sidebar": "Fixed width (e.g., w-64), hidden on mobile, distinct active states.",
+      "header": "Sticky header with backdrop-blur and 1px bottom border. DO NOT use complete transparent backgrounds.",
+      "mobile_nav": "Hamburger menu on mobile only. Desktop MUST show all links."
+    },
+    "spacing": [
+      "Generous spacing for layout padding (p-6 or p-8 inside main content).",
+      "Tight padding inside data-dense cards (p-4 or p-6)."
+    ]
+  },
+  "components": {
+    "cards": {
+      "style": "Tactical Minimalism. Flat backgrounds, max 4px border-radius (rounded-sm) or sharp edges.",
+      "borders": "1px solid strokes (border-border). Replace soft shadows with 1px solid borders or 2px inner glow highlights.",
+      "hover": "Slight lift (-translate-y-0.5) and border color darkens/lightens."
+    },
+    "buttons": {
+      "style": "Sharp or slightly rounded (rounded-sm), high contrast. Only use primary color for main CTAs."
+    },
+    "badges": {
+      "style": "Uppercase, tracking-widest, text-xs, solid 1px border matching the text color."
+    },
+    "tables_and_lists": {
+      "style": "Use Shadcn table components in .jsx or .js format. Zebra striping or subtle hover states. Left align dense data."
+    }
+  },
+  "visual_enhancers": {
+    "surfaces": "Use 'Grid Borders' pattern for data-heavy sections (border-collapse, border-r, border-b).",
+    "glassmorphism": "For sticky headers or floating overlays, use bg-white/70 or bg-black/60 with backdrop-blur-xl and 1px delicate inner stroke. NEVER just transparent.",
+    "icons": "Phosphor Icons (@phosphor-icons/react) for dense dashboard layouts."
+  },
+  "motion": {
+    "rules": [
+      "Minimalist animations.",
+      "Micro-interactions for feedback (hover states, click/press).",
+      "Staggered entrance for lists.",
+      "Respect prefers-reduced-motion.",
+      "DO NOT use universal transition 'all'. Transition specific properties like transform and opacity."
+    ]
+  },
+  "accessibility": {
+    "rules": [
+      "Contrast: Normal text > 4.5:1, large text > 3:1.",
+      "Hover: Always explicitly set text color on hover (e.g., hover:bg-zinc-900 hover:text-white).",
+      "Focus: Must have higher contrast than default state (e.g., focus:ring-2 focus:ring-primary).",
+      "All interactive elements MUST include a data-testid attribute in kebab-case."
+    ]
+  },
+  "images": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1605296867304-46d5465a13f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwzfHxneW0lMjB3b3Jrb3V0JTIwZGFya3xlbnwwfHx8fDE3ODY1NTU4OTh8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Shirtless man lifting barbell in gym. Good for high-intensity authentication background."
+    },
+    "gym_cover_placeholder": {
+      "url": "https://images.unsplash.com/photo-1689877020200-403d8542d95d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwyfHxneW0lMjBpbnRlcmlvcnxlbnwwfHx8fDE3ODY1NTU4OTh8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Gym filled with lots of machines. Good for gym setting default cover."
+    },
+    "avatar_placeholder": {
+      "url": "https://images.unsplash.com/photo-1704223523169-52feeed90365?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxmaXRuZXNzJTIwdHJhaW5lciUyMHBvcnRyYWl0fGVufDB8fHx8MTc4NjU1NTg5OHww&ixlib=rb-4.1.0&q=85",
+      "description": "Man in a black tank top posing. Avatar for members or trainers."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Prioritize using Shadcn/UI primitives for tables, dialogs, cards, dropdowns (adapted for .js/.jsx), but override their border-radius and shadows to match the 'Tactical Minimalism' style (sharp edges, 1px borders, no soft shadows).",
+    "Install and use @phosphor-icons/react for dense dashboard icons.",
+    "Implement light and dark mode toggling seamlessly.",
+    "All KPI cards should be strictly grid aligned, utilizing h-full to avoid jagged bottoms.",
+    "Do not add universal centered layouts (.App { text-align: center }). Maintain left-alignment for dashboards.",
+    "Use sonner for toast notifications.",
+    "Apply data-testid to every clickable element (buttons, links, table rows, dropdown items).",
+    "Empty states should use the 'Avatar/Icon' + 'Title' + 'Description' + 'Action Button' structure. Keep them centered within their container.",
+    "Implement status badges according to the 'status' colors defined in this schema."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic, 'on distribution' outputs like slop gradients.",
+    "Create depth through layered design elements with z-index hierarchy and crisp 1px borders.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) for sticky navs/headers.",
+    "MUST NOT apply universal transition: all. Target specific properties.",
+    "Always use modern button styles (sharp edges for this app).",
+    "NEVER use AI assistant Emoji characters for icons.",
+    "Every interaction needs micro-animations (hover, focus, active states).",
+    "Use sonner for toasts at /app/src/components/ui/sonner.js",
+    "Remember to apply guidelines for .js files not for .tsx files."
+  ]
+}

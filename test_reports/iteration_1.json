@@ -1,0 +1,39 @@
+{
+  "summary": "First testing run for GymOS Next.js foundation. Executed backend API smoke via curl (login/me/logout for gym admin, health) and comprehensive Playwright UI E2E covering all 11 required flows. All acceptance criteria pass. No blocking issues found.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard/Overview cards", "issues": ["KPI/stat card labels are visually uppercased via CSS (e.g., 'TOTAL GYMS', 'TOTAL MEMBERS'); underlying text is correct — cosmetic note only, matches design system."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Recharts (used in RevenueChart) emits noisy console warnings about defaultProps for XAxis/YAxis — non-blocking but should be upgraded/refactored to satisfy React 19 future compatibility.",
+    "Auth cookie verified httpOnly; JWT secret in env; brute-force lockout note honored during testing (did not hammer same email)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "Gym Admin admin@ironpulse.in/GymAdmin@123; Super Admin owner@gymos.app/SuperAdmin@123",
+  "seed_data_creation": "Used existing idempotent seed (Iron Pulse Fitness gym + 2 users). No test data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Next.js app at external preview URL; /api/* is proxied by FastAPI on 8001 to Next on 3000. Auth cookie name gymos_session, httpOnly. Brute-force lockout = 5 fails per ip:email/15min; to reset: mongosh gym_saas 'db.loginattempts.deleteMany({})'. KPI/nav labels use CSS uppercase; assert against underlying text (title-case) in HTML, not visual inner_text if labels appear uppercase.",
+  "verified_flows": [
+    "Login page renders with demo credentials hint",
+    "Gym admin login -> /dashboard shows 7/7 KPI cards + 9/9 sidebar items + gym name + mock banner",
+    "Super admin login -> /super-admin shows 5/5 stat cards + 3/3 nav items + Iron Pulse Fitness in Recent Gyms",
+    "Invalid credentials -> data-testid=login-error shows 'Invalid email or password', stays on /login",
+    "Role separation: gym admin -> /super-admin redirects to /dashboard; super admin -> /dashboard redirects to /super-admin",
+    "Unauthenticated /dashboard, /members, /super-admin all redirect to /login?redirect=...",
+    "Sidebar navigation: Members/Memberships/Attendance/Payments/Expiry/Reports/Announcements all show 'Coming soon'",
+    "Settings shows +919876543210 and hello@ironpulse.in",
+    "Theme toggle switches html class dark <-> light",
+    "User menu -> Logout returns to /login and clears session",
+    "Mobile viewport (390x844): mobile-nav-trigger visible; clicking opens sheet with nav items",
+    "/super-admin/subscriptions shows ACTIVE, PAST_DUE, SUSPENDED, CANCELLED breakdown + MRR (sample) card"
+  ],
+  "rca of the issue": "N/A — no issues to RCA."
+}
