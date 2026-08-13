@@ -1,0 +1,35 @@
+{
+  "summary": "Backend-only verification of Super Admin Gym Management + Forgot/Reset Password. Wrote pytest suite (14 tests) hitting the external preview URL through the FastAPI->Next proxy. All 14 pass on final run. Verified: SUPER_ADMIN login (httpOnly gymos_session), GET /api/admin/gyms, POST /api/admin/gyms creating gym+GYM_ADMIN atomically with no passwordHash leaked, new admin can log in, duplicate admin email -> 409 with no orphan gym, GET/PATCH by id, invalid id -> 404, status PATCH suspends+reactivates without deleting business data, GYM_ADMIN -> 403 and unauth -> 401 on /api/admin/gyms, forgot-password returns generic 200 for existing AND non-existent emails with identical body and no raw token, weak password -> 422, garbage token -> 400, valid reset -> {success:true}, token single-use (reuse -> 400), old session invalidated (/me -> 401) after reset, fresh login with new password works. Demo Gym Admin password restored to GymAdmin@123.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/auth/reset-password + /api/auth/login (session invalidation timing)",
+        "issue": "Sub-second race in session-invalidation check. JWT `iat` is stored in seconds (jose setIssuedAt) but user.passwordChangedAt is stored in ms. In src/lib/auth/session.ts the guard is `payload.iat * 1000 < new Date(user.passwordChangedAt).getTime()`. If a client logs in within the same wall-clock second as the reset (e.g., <=1s later), `iat*1000` equals floor(now/1000)*1000 which is < passwordChangedAt(ms), so the just-issued fresh session is spuriously rejected and /api/auth/me returns 401. Repro: reset password, then immediately login and call /me within ~1s -> 401. Workaround in test: sleep 1.5s. Fix suggestion: compare in seconds granularity, e.g. `payload.iat < Math.floor(new Date(user.passwordChangedAt).getTime()/1000)`, or subtract 1000ms of tolerance."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_admin_gyms_and_reset.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix sub-second session-invalidation race in src/lib/auth/session.ts by comparing iat vs passwordChangedAt at second-level granularity (or add ~1s tolerance)."
+  ],
+  "critical_code_review_comments": [
+    "src/lib/auth/session.ts session-invalidation compares seconds*1000 against ms directly; add second-level rounding to avoid rejecting freshly minted tokens issued in the same wall-clock second as a password change.",
+    "Consider returning a stable, well-defined JSON shape (e.g., {gym:{...}}) uniformly from GET /api/admin/gyms/{id} and PATCH endpoints - current tests handled both {gym:...} and raw gym shapes defensively.",
+    "createGymWithAdmin correctly rolls back on duplicate admin email (verified no orphan gym persists after 409). Good compensating logic."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_gyms_and_reset.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "n/a"},
+  "test_credentials": "Super Admin owner@gymos.app / SuperAdmin@123; Gym Admin admin@ironpulse.in / GymAdmin@123 (restored after reset flow test).",
+  "seed_data_creation": "Created TEST_Gym_* + TEST_admin_*@example.com during POST /api/admin/gyms tests. Cleaned up post-run via mongosh (deleted 3 test gyms + matching users). Iron Pulse Fitness (seed) untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "External base URL: https://fitcore-base.preview.emergentagent.com (FastAPI 8001 -> Next 3000). Reset token log line format: '[password-reset] link for <email>: <url>?token=<hex>' in /var/log/supervisor/frontend.out.log. Brute-force lockout: reset via mongosh gym_saas --eval 'db.loginattempts.deleteMany({})'. Do NOT retry wrong passwords >3x for the same email. After a password reset, wait >=1.5s before login+/me to avoid the known sub-second timing bug in session-invalidation. Test file: /app/backend/tests/test_admin_gyms_and_reset.py.",
+  "rca of the issue": "Session-invalidation timing bug: JWT iat granularity (seconds) mismatches passwordChangedAt granularity (ms). When both events occur in the same wall-clock second, iat*1000 < passwordChangedAt_ms is true, so the fresh session token is treated as pre-change and rejected. Deterministic when reset->login gap < ~1s; disappears once the second boundary is crossed. Fix by comparing at second granularity: `payload.iat < Math.floor(passwordChangedAt.getTime()/1000)` (strictly less-than after flooring), which is the intended semantic."
+}

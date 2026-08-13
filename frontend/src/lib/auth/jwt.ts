@@ -7,6 +7,7 @@ export interface TokenPayload {
   email: string;
   role: Role;
   gymId: string | null;
+  iat?: number;
 }
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -47,6 +48,7 @@ export async function verifySessionToken(
       email: typeof payload.email === "string" ? payload.email : "",
       role: payload.role as Role,
       gymId: typeof payload.gymId === "string" ? payload.gymId : null,
+      iat: typeof payload.iat === "number" ? payload.iat : undefined,
     };
   } catch {
     return null;

@@ -92,9 +92,21 @@ export async function getAuthState(): Promise<AuthState | null> {
     role: Role;
     isActive: boolean;
     gymId: unknown;
+    passwordChangedAt?: Date | null;
   }>();
 
   if (!user || !user.isActive) return null;
+
+  // Session invalidation: reject tokens issued before the last password change.
+  // Compare at second granularity (JWT `iat` is in seconds) so a session minted
+  // in the same second as the reset is not spuriously rejected.
+  if (
+    user.passwordChangedAt &&
+    typeof payload.iat === "number" &&
+    payload.iat < Math.floor(new Date(user.passwordChangedAt).getTime() / 1000)
+  ) {
+    return null;
+  }
 
   const gymId = user.gymId ? String(user.gymId) : null;
   let gym: GymSummary | null = null;

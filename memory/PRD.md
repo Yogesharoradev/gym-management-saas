@@ -42,6 +42,7 @@ Announcement, WhatsAppUsage, LoginAttempt. Subscription states: ACTIVE, PAST_DUE
 - TypeScript: no errors. No `any`.
 
 ## Bug fixes
+- 2026-08-13: Backend feature adds — Super Admin Gym Management (create gym + initial gym admin, list/get/update, suspend/activate) under `/api/admin/gyms`, and secure Forgot/Reset password flow (`/api/auth/forgot-password`, `/api/auth/reset-password`). Reset tokens are cryptographically random, stored only as a SHA-256 hash, 30-min TTL, single-use; forgot-password returns a generic response (no account enumeration). Added `User.passwordChangedAt` + `iat` check in `getAuthState` to invalidate sessions issued before a password change (second-granularity comparison). NOTE: Mongoose caches models across Next hot reload — schema field additions require a `supervisorctl restart frontend` to take effect. Email delivery is NOT integrated (no provider configured); reset link is logged server-side — integrate SendGrid/Resend later. Verified by testing agent (14/14).
 - 2026-08-13: Fixed "Sign in button does nothing". Root cause: browser autofill/password-managers inject a `style` attribute onto the login inputs after SSR, causing a React hydration mismatch that de-opted the form so `onSubmit` never bound (clicking did a native GET /login instead of POSTing). Fix: `suppressHydrationWarning` on the `<input>` primitive (`src/components/ui/input.tsx`). Verified by testing agent — both demo logins + invalid-credential error all pass, role separation/tenant isolation intact.
 
 ## Backlog (future tasks, not in this foundation)
