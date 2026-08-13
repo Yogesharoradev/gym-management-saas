@@ -1,0 +1,35 @@
+{
+  "summary": "Verified Sign-in bug fix (suppressHydrationWarning on Input) via UI. All 7 review flows PASS on the external preview URL using data-testid selectors. Clicking data-testid=login-submit-button now submits the form, calls POST /api/auth/login, sets an httpOnly gymos_session cookie, and redirects Gym Admin -> /dashboard and Super Admin -> /super-admin. Dashboards render with KPI/overview cards. Invalid credentials show inline 'Invalid email or password' and stay on /login. Invalid-email zod validation shows 'Enter a valid email address' and does not submit. Logout clears the session and returns to /login. Role separation and unauthenticated-redirect regressions hold. No hydration pageerror observed. Only recharts defaultProps console warnings (pre-existing, non-blocking).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Recharts (Dashboard Revenue chart)", "issues": ["Console warnings about XAxis/YAxis defaultProps deprecation from recharts (pre-existing, non-blocking)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Consider upgrading recharts to a version compatible with React 19 to eliminate defaultProps warnings.",
+    "suppressHydrationWarning on <input> is a valid, narrowly-scoped fix for browser autofill/password-manager injected 'style' attribute; keep it constrained to the Input primitive."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "Gym Admin admin@ironpulse.in/GymAdmin@123 (-> /dashboard); Super Admin owner@gymos.app/SuperAdmin@123 (-> /super-admin)",
+  "seed_data_creation": "None. Cleared db.loginattempts before test run to avoid brute-force lock.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "External preview URL: https://fitcore-base.preview.emergentagent.com. FastAPI on 8001 proxies /api/* to Next.js on 3000. Auth cookie name = gymos_session (httpOnly, SameSite=Lax). Brute-force lockout = 5 fails per ip:email/15 min; reset via mongosh gym_saas --eval 'db.loginattempts.deleteMany({})'. Login form is react-hook-form + zod. Use data-testid login-email-input / login-password-input / login-submit-button / login-error. Dashboard KPI cards do NOT have kpi-card-* testids in current code; verify by visible text (e.g., 'Total Members', 'Active Members'). Do NOT retry wrong passwords for the same email more than ~3 times.",
+  "verified_flows": [
+    "PRIMARY: Sign-in button submits with valid Gym Admin creds -> /dashboard, gymos_session cookie present (httpOnly=true), dashboard renders with KPI cards + Iron Pulse Fitness gym context",
+    "Super Admin login -> /super-admin, Overview stat cards render (Total Gyms/Active/Past Due/Suspended/MRR)",
+    "Invalid credentials -> data-testid=login-error text 'Invalid email or password', stays on /login",
+    "Invalid email format (zod) -> inline 'Enter a valid email address', stays on /login (no POST)",
+    "Gym Admin logout via user-menu-trigger -> logout-button clears cookie and returns to /login",
+    "Role separation: authenticated Gym Admin visiting /super-admin -> /dashboard",
+    "Unauthenticated /dashboard -> /login?redirect=%2Fdashboard",
+    "No client hydration pageerror thrown on /login (fix confirmed)"
+  ],
+  "rca of the issue": "Pre-fix: browser autofill/password-manager injected a 'style' attribute onto the login inputs after SSR, causing a React hydration mismatch. React de-opted the client tree, so onSubmit handler was never bound to the form, and clicking Sign in performed a native GET form submission back to /login instead of POSTing /api/auth/login. Fix: added suppressHydrationWarning to the <input> element inside src/components/ui/input.tsx so React ignores server/client attribute diffs on inputs. Verified: form submits via JS, POST /api/auth/login returns 200 with Set-Cookie, and router.replace navigates to the role-appropriate dashboard."
+}

@@ -41,6 +41,9 @@ Announcement, WhatsAppUsage, LoginAttempt. Subscription states: ACTIVE, PAST_DUE
 - Light/Dark theme toggle. Status badges, empty/loading/error states.
 - TypeScript: no errors. No `any`.
 
+## Bug fixes
+- 2026-08-13: Fixed "Sign in button does nothing". Root cause: browser autofill/password-managers inject a `style` attribute onto the login inputs after SSR, causing a React hydration mismatch that de-opted the form so `onSubmit` never bound (clicking did a native GET /login instead of POSTing). Fix: `suppressHydrationWarning` on the `<input>` primitive (`src/components/ui/input.tsx`). Verified by testing agent — both demo logins + invalid-credential error all pass, role separation/tenant isolation intact.
+
 ## Backlog (future tasks, not in this foundation)
 - P0: Members CRUD, Membership plans + assignment, Payments, Attendance workflows.
 - P1: Expiry/renewals logic, Reports, Announcements + WhatsApp integration.
