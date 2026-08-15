@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Chivo, DM_Sans } from "next/font/google";
+import { Chivo, DM_Sans, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const chivo = Chivo({
   subsets: ["latin"],
@@ -20,13 +23,24 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "GymOS — Gym Management Platform",
-  description: "Manage members, memberships, attendance and payments for your gym.",
+  description:
+    "Manage members, memberships, attendance and payments for your gym.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${chivo.variable} ${dmSans.variable} font-sans antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", inter.variable)}
+    >
+      <body
+        className={`${chivo.variable} ${dmSans.variable} font-sans antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
