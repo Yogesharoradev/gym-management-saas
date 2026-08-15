@@ -20,31 +20,24 @@ import {
   Phone,
   Save,
   User,
+  X,
+  Shield,
+  Sparkles,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 import { createGymSchema, type CreateGymInput } from "@/lib/validation/gym";
 
 interface CreateGymResponse {
-  gym?: {
-    id: string;
-    name: string;
-  };
-  admin?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  gym?: { id: string; name: string };
+  admin?: { id: string; name: string; email: string };
   error?: string;
 }
 
 export default function NewGymPage() {
   const router = useRouter();
-
   const [showPassword, setShowPassword] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [successData, setSuccessData] = React.useState<{
@@ -65,11 +58,7 @@ export default function NewGymPage() {
       phone: "",
       address: "",
       logo: null,
-      admin: {
-        name: "",
-        email: "",
-        password: "",
-      },
+      admin: { name: "", email: "", password: "" },
     },
   });
 
@@ -80,9 +69,7 @@ export default function NewGymPage() {
     try {
       const response = await fetch("/api/admin/gyms", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: values.name,
           email: values.email || "",
@@ -113,7 +100,7 @@ export default function NewGymPage() {
       window.setTimeout(() => {
         router.replace("/super-admin/gyms");
         router.refresh();
-      }, 1200);
+      }, 1500);
     } catch {
       setServerError(
         "Something went wrong while creating the gym. Please try again.",
@@ -122,284 +109,386 @@ export default function NewGymPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start gap-4">
-        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-          <Link href="/super-admin/gyms" aria-label="Back to gyms">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
+    <div className=" max-w-8xl mx-auto">
+      {/* ─── CSS Animations ─── */}
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-8px); max-height: 0; }
+          to { opacity: 1; transform: translateY(0); max-height: 200px; }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.5s ease-out forwards;
+          opacity: 0;
+        }
+        .animate-slide-down {
+          animation: slideDown 0.4s ease-out forwards;
+          overflow: hidden;
+        }
+      `}</style>
 
-        <div>
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Platform
-          </p>
+      {/* ─── Back Button ─── */}
+      <div
+        className="animate-fade-in-up flex items-center"
+        style={{ animationDelay: "0ms" }}
+      >
+        <Link href="/super-admin/gyms">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-3 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+          >
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Back to Gyms
+          </Button>
+        </Link>
+      </div>
 
-          <h1 className="mt-1 font-heading text-3xl font-black tracking-tighter">
-            Create New Gym
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Add a gym and create its initial administrator account.
-          </p>
+      {/* ─── Hero Header ─── */}
+      <div
+        className="animate-fade-in-up relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6 sm:p-8 shadow-lg"
+        style={{ animationDelay: "50ms" }}
+      >
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-50" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 shadow-lg">
+            <Sparkles className="h-7 w-7 text-white/90" />
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+              New Onboarding
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Create New Gym
+            </h1>
+            <p className="mt-1 text-sm text-white/60">
+              Add a gym and create its initial administrator account.
+            </p>
+          </div>
         </div>
       </div>
 
+      {/* ─── Alerts ─── */}
+      {serverError && (
+        <div className="animate-slide-down rounded-xl border border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-950/20 px-5 py-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-900/30">
+              <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-rose-800 dark:text-rose-300">
+                Unable to create gym
+              </p>
+              <p className="mt-0.5 text-sm text-rose-600 dark:text-rose-400">
+                {serverError}
+              </p>
+            </div>
+            <button
+              onClick={() => setServerError(null)}
+              className="text-rose-400 hover:text-rose-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {successData && (
+        <div className="animate-slide-down rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/20 px-5 py-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                Gym created successfully
+              </p>
+              <div className="mt-2 space-y-1 text-sm text-emerald-700 dark:text-emerald-400">
+                <p>
+                  <span className="font-medium">Gym:</span>{" "}
+                  {successData.gymName}
+                </p>
+                <p>
+                  <span className="font-medium">Admin:</span>{" "}
+                  {successData.adminName}
+                </p>
+                <p>
+                  <span className="font-medium">Email:</span>{" "}
+                  {successData.adminEmail}
+                </p>
+              </div>
+              <p className="mt-2 text-xs text-emerald-600/70 dark:text-emerald-500/70">
+                Redirecting to gyms list...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
-        {/* Server error */}
-        {serverError ? (
-          <div
-            className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            role="alert"
-          >
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              <p className="font-semibold">Unable to create gym</p>
-              <p className="mt-0.5">{serverError}</p>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Success */}
-        {successData ? (
-          <div
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800"
-            role="status"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span className="font-semibold">Gym created successfully</span>
-            </div>
-            <div className="ml-6 space-y-1">
-              <p>
-                <span className="font-medium">Gym:</span> {successData.gymName}
-              </p>
-              <p>
-                <span className="font-medium">Admin:</span>{" "}
-                {successData.adminName}
-              </p>
-              <p>
-                <span className="font-medium">Email:</span>{" "}
-                {successData.adminEmail}
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Gym Information */}
-        <Card>
-          <CardHeader className="border-b">
+        {/* ─── Gym Information ─── */}
+        <div
+          className="animate-fade-in-up rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
+          style={{ animationDelay: "150ms" }}
+        >
+          <div className="border-b border-slate-100 dark:border-slate-800/80 px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/20">
+                <Building2 className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
-                <CardTitle className="text-base">Gym Information</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Basic information about the gym.
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Gym Information
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Basic details about the gym.
                 </p>
               </div>
             </div>
-          </CardHeader>
-
-          <CardContent className="grid gap-5 p-6 md:grid-cols-2">
+          </div>
+          <div className="p-6 grid gap-5 sm:grid-cols-2">
             {/* Gym Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">
-                Gym Name <span className="text-destructive">*</span>
+              <Label
+                htmlFor="name"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Gym Name <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
-                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="name"
                   placeholder="Iron Pulse Fitness"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("name")}
                   aria-invalid={Boolean(errors.name)}
                 />
               </div>
-              {errors.name ? (
-                <p className="text-xs text-destructive">
+              {errors.name && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.name.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
-            {/* Gym Email */}
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Gym Email</Label>
+              <Label
+                htmlFor="email"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Gym Email
+              </Label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
                   placeholder="hello@gym.in"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("email")}
                   aria-invalid={Boolean(errors.email)}
                 />
               </div>
-              {errors.email ? (
-                <p className="text-xs text-destructive">
+              {errors.email && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.email.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* Phone */}
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label
+                htmlFor="phone"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Phone Number
+              </Label>
               <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="phone"
                   type="tel"
                   autoComplete="tel"
                   placeholder="+91 98765 43210"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("phone")}
                   aria-invalid={Boolean(errors.phone)}
                 />
               </div>
-              {errors.phone ? (
-                <p className="text-xs text-destructive">
+              {errors.phone && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.phone.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* Logo */}
             <div className="space-y-2">
-              <Label htmlFor="logo">Logo URL</Label>
+              <Label
+                htmlFor="logo"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Logo URL
+              </Label>
               <div className="relative">
-                <ImageIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <ImageIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="logo"
                   type="url"
                   placeholder="https://example.com/logo.png"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("logo")}
                   aria-invalid={Boolean(errors.logo)}
                 />
               </div>
-              {errors.logo ? (
-                <p className="text-xs text-destructive">
+              {errors.logo && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.logo.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* Address */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="address">Address</Label>
+            <div className="space-y-2 sm:col-span-2">
+              <Label
+                htmlFor="address"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Address
+              </Label>
               <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <textarea
                   id="address"
                   rows={3}
                   placeholder="Enter complete gym address"
-                  className="flex min-h-[90px] w-full resize-y rounded-md border border-input bg-background px-9 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex min-h-[90px] w-full resize-y rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-10 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("address")}
                   aria-invalid={Boolean(errors.address)}
                 />
               </div>
-              {errors.address ? (
-                <p className="text-xs text-destructive">
+              {errors.address && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.address.message}
                 </p>
-              ) : null}
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Gym Admin */}
-        <Card>
-          <CardHeader className="border-b">
+        {/* ─── Gym Administrator ─── */}
+        <div
+          className="animate-fade-in-up rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
+          style={{ animationDelay: "250ms" }}
+        >
+          <div className="border-b border-slate-100 dark:border-slate-800/80 px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <User className="h-5 w-5 text-muted-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <CardTitle className="text-base">Gym Administrator</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Gym Administrator
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Create the initial administrator account for this gym.
                 </p>
               </div>
             </div>
-          </CardHeader>
-
-          <CardContent className="grid gap-5 p-6 md:grid-cols-2">
+          </div>
+          <div className="p-6 grid gap-5 sm:grid-cols-2">
             {/* Admin Name */}
             <div className="space-y-2">
-              <Label htmlFor="admin-name">
-                Admin Name <span className="text-destructive">*</span>
+              <Label
+                htmlFor="admin-name"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Admin Name <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="admin-name"
                   placeholder="Rahul Sharma"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("admin.name")}
                   aria-invalid={Boolean(errors.admin?.name)}
                 />
               </div>
-              {errors.admin?.name ? (
-                <p className="text-xs text-destructive">
+              {errors.admin?.name && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.admin.name.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* Admin Email */}
             <div className="space-y-2">
-              <Label htmlFor="admin-email">
-                Admin Email <span className="text-destructive">*</span>
+              <Label
+                htmlFor="admin-email"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Admin Email <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="admin-email"
                   type="email"
                   autoComplete="email"
                   placeholder="admin@gym.in"
-                  className="pl-9"
+                  className="h-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("admin.email")}
                   aria-invalid={Boolean(errors.admin?.email)}
                 />
               </div>
-              {errors.admin?.email ? (
-                <p className="text-xs text-destructive">
+              {errors.admin?.email && (
+                <p className="text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.admin.email.message}
                 </p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
+              )}
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 This email will be used to sign in to the GymOS console.
               </p>
             </div>
 
             {/* Admin Password */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="admin-password">
-                Temporary Password <span className="text-destructive">*</span>
+            <div className="space-y-2 sm:col-span-2">
+              <Label
+                htmlFor="admin-password"
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              >
+                Temporary Password <span className="text-rose-500">*</span>
               </Label>
               <div className="relative max-w-md">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="admin-password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   placeholder="Enter a strong password"
-                  className="pr-10 pl-9"
+                  className="h-10 pr-10 pl-10 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900/30 transition-all duration-200"
                   {...register("admin.password")}
                   aria-invalid={Boolean(errors.admin?.password)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((c) => !c)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
@@ -409,35 +498,55 @@ export default function NewGymPage() {
                   )}
                 </button>
               </div>
-              {errors.admin?.password ? (
-                <p className="max-w-md text-xs text-destructive">
+              {errors.admin?.password && (
+                <p className="max-w-md text-xs text-rose-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.admin.password.message}
                 </p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
+              )}
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 This password is used for the initial administrator login.
               </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscription note */}
-        <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Subscription:</span>{" "}
-          New gyms are created with an active subscription. The current backend
-          automatically starts a 30-day subscription period.
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" disabled={isSubmitting}>
-            <Link href="/super-admin/gyms">Cancel</Link>
-          </Button>
+        {/* ─── Subscription Note ─── */}
+        <div
+          className="animate-fade-in-up flex items-start gap-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 px-5 py-4 text-xs"
+          style={{ animationDelay: "350ms" }}
+        >
+          <Shield className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <div>
+            <p className="font-semibold text-slate-700 dark:text-slate-300">
+              Subscription
+            </p>
+            <p className="mt-1 text-slate-500 dark:text-slate-500 leading-relaxed">
+              New gyms are created with an active subscription. The current
+              backend automatically starts a 30-day subscription period.
+            </p>
+          </div>
+        </div>
 
+        {/* ─── Actions ─── */}
+        <div
+          className="animate-fade-in-up flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800"
+          style={{ animationDelay: "400ms" }}
+        >
+          <Link href="/super-admin/gyms">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+              className="h-10 px-6 text-xs font-semibold w-full sm:w-auto border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
+            >
+              Cancel
+            </Button>
+          </Link>
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="min-w-[140px]"
+            className="h-10 px-6 text-xs font-semibold w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
           >
             {isSubmitting ? (
               <>
