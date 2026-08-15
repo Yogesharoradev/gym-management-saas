@@ -4,7 +4,12 @@ import { connectToDatabase } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { GymModel, type IGym } from "@/models/gym.model";
 import { UserModel, type IUser } from "@/models/user.model";
-import { GYM_STATUS, SUBSCRIPTION_STATUS, ROLES, type GymStatus } from "@/lib/constants";
+import {
+  GYM_STATUS,
+  SUBSCRIPTION_STATUS,
+  ROLES,
+  type GymStatus,
+} from "@/lib/constants";
 import type { CreateGymInput, UpdateGymInput } from "@/lib/validation/gym";
 
 export interface SerializedGym {
@@ -186,4 +191,16 @@ export async function setGymStatus(
     { new: true },
   );
   return gym ? serializeGym(gym) : null;
+}
+
+export async function getGymAdminByGymId(
+  gymId: string,
+): Promise<SerializedAdmin | null> {
+  if (!isValidObjectId(gymId)) return null;
+  await connectToDatabase();
+  const admin = await UserModel.findOne({
+    gymId,
+    role: ROLES.GYM_ADMIN,
+  }).lean<IUser>();
+  return admin ? serializeAdmin(admin) : null;
 }

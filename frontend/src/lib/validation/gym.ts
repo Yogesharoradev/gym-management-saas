@@ -3,7 +3,10 @@ import { GYM_STATUS, SUBSCRIPTION_STATUS } from "@/lib/constants";
 import { strongPasswordSchema } from "@/lib/validation/auth";
 
 const optionalEmail = z
-  .union([z.string().trim().toLowerCase().email("Enter a valid email"), z.literal("")])
+  .union([
+    z.string().trim().toLowerCase().email("Enter a valid email"),
+    z.literal(""),
+  ])
   .optional();
 
 export const createGymSchema = z.object({
@@ -30,7 +33,7 @@ export const updateGymSchema = z
     address: z.string().trim().optional(),
     logo: z.string().url("Logo must be a valid URL").nullable().optional(),
     subscriptionStatus: z.nativeEnum(SUBSCRIPTION_STATUS).optional(),
-    subscriptionEndDate: z.string().datetime().nullable().optional(),
+    subscriptionEndDate: z.string().nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields provided to update",

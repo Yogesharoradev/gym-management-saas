@@ -36,10 +36,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrencyINR, formatDate } from "@/lib/utils";
+import { MonthlyAdminFee } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-const SAMPLE_ARPA = 1000;
+const SAMPLE_ARPA = MonthlyAdminFee;
 
 /* ─── Stat Card ─── */
 function StatCard({
@@ -310,20 +311,6 @@ export default async function SuperAdminOverviewPage() {
           progress={42}
           color="bg-violet-500"
         />
-      </div>
-
-      {/* ─── Info Banner ─── */}
-      <div className="flex items-start gap-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-5 py-4 text-xs">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        <div>
-          <p className="font-semibold text-slate-700 dark:text-slate-300">
-            Note on MRR
-          </p>
-          <p className="mt-1 text-slate-500 dark:text-slate-500 leading-relaxed">
-            Gym counts are live. MRR is a placeholder estimate (₹2,999 ARPA)
-            until subscription billing is fully implemented.
-          </p>
-        </div>
       </div>
 
       {/* ─── Recent Gyms Table ─── */}

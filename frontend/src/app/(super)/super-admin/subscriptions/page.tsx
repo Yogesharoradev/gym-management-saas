@@ -24,10 +24,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyINR } from "@/lib/utils";
+import { MonthlyAdminFee } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-const SAMPLE_ARPA = 1000;
+const SAMPLE_ARPA = MonthlyAdminFee;
 
 /* ─── Stat Card ─── */
 function StatCard({

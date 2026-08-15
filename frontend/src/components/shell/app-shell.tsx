@@ -35,6 +35,7 @@ import {
 import { GYM_NAV, SUPER_NAV, type NavItem } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import type { GymSummary, SessionUser } from "@/types";
+import { useLogout } from "@/lib/hooks/useLogout";
 
 const ROOT_HREFS = new Set(["/dashboard", "/super-admin"]);
 
@@ -168,15 +169,7 @@ export function AppShell({
         .toUpperCase()
     : (user.email?.slice(0, 2).toUpperCase() ?? "U");
 
-  async function handleLogout() {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-    } finally {
-      window.location.href = "/login";
-    }
-  }
+  const logout = useLogout();
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 lg:grid lg:grid-cols-[16.5rem_1fr]">
       {/* ─── Dark Sidebar ─── */}
@@ -236,7 +229,7 @@ export function AppShell({
               <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem
                 className="text-rose-400 focus:bg-rose-500/10 focus:text-rose-300 cursor-pointer"
-                onClick={handleLogout}
+                onClick={logout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
@@ -323,7 +316,7 @@ export function AppShell({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleLogout}
+              onClick={logout}
               className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
             >
               <LogOut className="mr-1.5 h-4 w-4" />

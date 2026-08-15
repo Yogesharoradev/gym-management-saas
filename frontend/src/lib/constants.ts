@@ -90,3 +90,5 @@ export const ANNOUNCEMENT_STATUS = {
 } as const;
 export type AnnouncementStatus =
   (typeof ANNOUNCEMENT_STATUS)[keyof typeof ANNOUNCEMENT_STATUS];
+
+export const MonthlyAdminFee = 1000;

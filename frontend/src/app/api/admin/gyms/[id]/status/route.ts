@@ -1,8 +1,8 @@
 import { type NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api";
 import { requireApiSuperAdmin } from "@/lib/auth/api-guard";
-import { gymStatusSchema } from "@/lib/validation/gym";
-import { setGymStatus } from "@/lib/data/gyms";
+import { gymStatusSchema } from "@/lib/validation/gym"; // ✅ Alag schema
+import { getGymById, setGymStatus } from "@/lib/data/gyms"; // ✅ Alag function
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,9 +21,10 @@ export async function PATCH(
     return jsonError("Invalid request body", 400);
   }
 
+  // ✅ Status schema validate karega
   const parsed = gymStatusSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message ?? "Invalid status", 422);
+    return jsonError(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   }
 
   const gym = await setGymStatus(params.id, parsed.data.status);
