@@ -33,10 +33,7 @@ export async function POST(request: NextRequest) {
 
   const lockedMinutes = await checkLock(identifier);
   if (lockedMinutes !== null) {
-    return jsonError(
-      `Too many failed attempts. Try again in ${lockedMinutes} minute(s).`,
-      429,
-    );
+    return jsonError(`Too many failed attempts. Try again in ${lockedMinutes} minute(s).`, 429);
   }
 
   const user = await UserModel.findOne({ email });
@@ -75,7 +72,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const redirectTo = user.role === ROLES.SUPER_ADMIN ? "/super-admin" : "/dashboard";
+  const redirectTo =
+    user.role === ROLES.SUPER_ADMIN
+      ? "/super-admin"
+      : user.mustChangePassword
+        ? "/change-password"
+        : "/dashboard";
 
   return jsonOk({
     user: {
