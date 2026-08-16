@@ -10,7 +10,7 @@ import { strongPasswordSchema } from "@/lib/validation/auth";
 
 interface ResetResponse { success?: boolean; error?: string }
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -54,5 +54,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <React.Suspense fallback={<main className="min-h-screen bg-neutral-950" />}>
+      <ResetPasswordContent />
+    </React.Suspense>
   );
 }
