@@ -32,120 +32,72 @@ export default async function DashboardPage() {
   const { user, gym } = await requireGymContext();
   const access = getGymAccessInfo(gym);
   const dashboard = await getGymDashboardData(gym.id);
+  const firstName = user.name.split(" ")[0] || "there";
 
   const stats = [
-    { key: "total-members", label: "Total Members", value: dashboard.totalMembers.toLocaleString("en-IN"), helper: "All registered members", icon: Users },
-    { key: "active-members", label: "Active Members", value: dashboard.activeMembers.toLocaleString("en-IN"), helper: "Members with active plans", icon: UserCheck, accent: true },
-    { key: "expiring-soon", label: "Expiring Soon", value: dashboard.expiringSoon.toLocaleString("en-IN"), helper: "Renewals due in 7 days", icon: Clock3 },
-    { key: "expired-members", label: "Expired Members", value: dashboard.expiredMembers.toLocaleString("en-IN"), helper: "Lapsed memberships", icon: UserX },
-    { key: "today-attendance", label: "Today's Attendance", value: dashboard.todayAttendance.toLocaleString("en-IN"), helper: "Check-ins recorded today", icon: CalendarCheck },
-    { key: "today-collection", label: "Today's Collection", value: formatCurrency(dashboard.todayCollection), helper: "Payments received today", icon: IndianRupee, accent: true },
-    { key: "pending-payments", label: "Pending Payments", value: formatCurrency(dashboard.pendingPayments), helper: "Outstanding membership dues", icon: Wallet },
+    { key: "total-members", label: "Total Members", value: dashboard.totalMembers.toLocaleString("en-IN"), helper: "All registered", icon: Users },
+    { key: "active-members", label: "Active Members", value: dashboard.activeMembers.toLocaleString("en-IN"), helper: "With active plans", icon: UserCheck, accent: true },
+    { key: "expiring-soon", label: "Expiring Soon", value: dashboard.expiringSoon.toLocaleString("en-IN"), helper: "In next 7 days", icon: Clock3, tone: "amber" as const },
+    { key: "expired-members", label: "Expired Members", value: dashboard.expiredMembers.toLocaleString("en-IN"), helper: "Lapsed memberships", icon: UserX, tone: "rose" as const },
+    { key: "today-attendance", label: "Today's Attendance", value: dashboard.todayAttendance.toLocaleString("en-IN"), helper: "Check-ins today", icon: CalendarCheck, tone: "blue" as const },
+    { key: "today-collection", label: "Today's Collection", value: formatCurrency(dashboard.todayCollection), helper: "Payments received", icon: IndianRupee, tone: "violet" as const },
+    { key: "pending-payments", label: "Pending Payments", value: formatCurrency(dashboard.pendingPayments), helper: "Outstanding dues", icon: Wallet, tone: "orange" as const },
   ];
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <section className="relative isolate overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.06] p-5 shadow-sm sm:p-7">
-        <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-400/[0.06] blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6 sm:space-y-7">
+      <section className="relative overflow-hidden rounded-[24px] border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/70 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-100px] right-40 h-52 w-52 rounded-full bg-cyan-200/20 blur-3xl" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="overline text-primary">{gym.name}</p>
-              <Badge variant="muted" className="rounded-full">Live data</Badge>
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              <span>Welcome back</span><span className="h-1 w-1 rounded-full bg-emerald-400" /><span className="text-slate-500">{gym.name}</span>
             </div>
-            <h2 className="mt-2 font-heading text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
-              Welcome back, {user.name.split(" ")[0]}.
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-              Your gym at a glance — members, attendance, collections and renewals that need attention today.
-            </p>
+            <h1 className="mt-2 font-heading text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{firstName} <span aria-hidden="true">👋</span></h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">Here&apos;s what&apos;s happening at {gym.name} today.</p>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <Badge className="border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-50"><span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />Live data</Badge>
+              <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-[11px] font-medium text-slate-500">Updated just now</span>
+            </div>
           </div>
-          <div className="hidden shrink-0 rounded-xl border border-border/70 bg-background/50 px-4 py-3 text-right sm:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Today</p>
-            <p className="mt-1 text-sm font-semibold">{new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date())}</p>
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><CalendarCheck className="h-5 w-5" /></div>
+            <div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">Today</p><p className="mt-0.5 text-sm font-bold text-slate-800">{formatDate(new Date().toISOString())}</p></div>
           </div>
         </div>
       </section>
 
       {access.inGracePeriod ? (
-        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20 sm:p-5" data-testid="subscription-grace-banner">
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 shadow-sm sm:p-5" data-testid="subscription-grace-banner">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600"><AlertTriangle className="h-4 w-4" /></div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-bold">Your subscription has expired</p>
-                <Badge className="w-fit rounded-full border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                  {access.graceDaysRemaining} {access.graceDaysRemaining === 1 ? "day" : "days"} remaining
-                </Badge>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-amber-800/90 dark:text-amber-200/80">
-                Your subscription ended on {gym.subscriptionEndDate ? formatDate(gym.subscriptionEndDate) : "the expiry date"}. You are in the 7-day grace period. Please contact the administrator to renew before access is paused.
-              </p>
-              {access.gracePeriodEndsAt ? <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">Grace period ends on {formatDate(access.gracePeriodEndsAt)}.</p> : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm font-bold text-amber-950">Your subscription has expired</p><Badge className="w-fit border-amber-200 bg-white/70 text-amber-800 hover:bg-white/70">{access.graceDaysRemaining} {access.graceDaysRemaining === 1 ? "day" : "days"} remaining</Badge></div>
+              <p className="mt-1 text-sm leading-6 text-amber-800/80">Your subscription ended on {gym.subscriptionEndDate ? formatDate(gym.subscriptionEndDate) : "the expiry date"}. You are in the 7-day grace period. Please contact the administrator to renew before access is paused.</p>
+              {access.gracePeriodEndsAt ? <p className="mt-2 text-xs font-semibold text-amber-700">Grace period ends on {formatDate(access.gracePeriodEndsAt)}.</p> : null}
             </div>
           </div>
         </div>
       ) : null}
 
       <section>
-        <div className="mb-3 flex items-center justify-between px-0.5">
-          <div>
-            <h3 className="font-heading text-sm font-bold">Gym overview</h3>
-            <p className="text-xs text-muted-foreground">Live metrics from your gym</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          {stats.map((stat) => (
-            <StatCard key={stat.key} testId={`stat-${stat.key}`} label={stat.label} value={stat.value} helper={stat.helper} icon={stat.icon} accent={stat.accent} />
-          ))}
+        <div className="mb-3 px-0.5"><h2 className="text-base font-bold tracking-tight text-slate-900">Gym overview</h2><p className="mt-0.5 text-xs text-slate-400">Live metrics from your gym</p></div>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 2xl:grid-cols-7">
+          {stats.map((stat) => <StatCard key={stat.key} testId={`stat-${stat.key}`} label={stat.label} value={stat.value} helper={stat.helper} icon={stat.icon} accent={stat.accent} tone={stat.tone} />)}
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-2 sm:px-6">
-            <div>
-              <CardTitle className="text-base">Revenue</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">Collection trend for the last 7 days</p>
-            </div>
-            <Badge variant="muted" className="rounded-full">Live</Badge>
-          </CardHeader>
-          <CardContent className="px-2 pb-4 sm:px-4 sm:pb-5">
-            <RevenueChart data={dashboard.revenueSeries} />
-          </CardContent>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
+        <Card className="overflow-hidden rounded-[22px] border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+          <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pb-2 sm:px-6"><div><CardTitle className="text-base font-bold text-slate-900">Revenue overview</CardTitle><p className="mt-1 text-xs text-slate-400">Collection trend for the last 7 days</p></div><Badge variant="muted" className="rounded-lg border-slate-200 bg-slate-50 text-slate-500">Last 7 days</Badge></CardHeader>
+          <CardContent className="px-2 pb-5 sm:px-5 sm:pb-6"><RevenueChart data={dashboard.revenueSeries} /></CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-border/70 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-base">Expiring Soon</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Memberships ending in 7 days</p>
-            </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Clock3 className="h-4 w-4" />
-            </span>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {dashboard.expiringMembers.length > 0 ? dashboard.expiringMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 transition-colors hover:border-primary/20 hover:bg-muted/40" data-testid={`expiring-member-${member.id}`}>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{member.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{member.plan}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 rounded-full bg-orange-500/10 px-2 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
-                  {member.endsIn}<ArrowUpRight className="h-3.5 w-3.5" />
-                </div>
-              </div>
-            )) : (
-              <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-border px-4 text-center">
-                <Info className="h-5 w-5 text-muted-foreground" />
-                <p className="mt-2 text-sm font-medium">No memberships expiring soon</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">You&apos;re all clear for the next 7 days.</p>
-              </div>
-            )}
+        <Card className="rounded-[22px] border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+          <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 sm:px-6"><div><CardTitle className="text-base font-bold text-slate-900">Expiring soon</CardTitle><p className="mt-1 text-xs text-slate-400">Memberships ending in 7 days</p></div><Clock3 className="mt-1 h-4 w-4 text-slate-400" /></CardHeader>
+          <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+            {dashboard.expiringMembers.length > 0 ? <div className="space-y-2">{dashboard.expiringMembers.map((member) => <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-3 transition-colors hover:border-emerald-100 hover:bg-emerald-50/30" data-testid={`expiring-member-${member.id}`}><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{member.name}</p><p className="truncate text-xs text-slate-400">{member.plan}</p></div><div className="flex shrink-0 items-center gap-1 rounded-lg bg-orange-50 px-2 py-1 text-xs font-bold text-orange-600">{member.endsIn}<ArrowUpRight className="h-3.5 w-3.5" /></div></div>)}</div> : <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-4 text-center"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400"><Info className="h-5 w-5" /></div><p className="mt-3 text-sm font-semibold text-slate-700">No memberships expiring soon</p><p className="mt-1 text-xs text-slate-400">You&apos;re all caught up! 🎉</p></div>}
           </CardContent>
         </Card>
       </div>
