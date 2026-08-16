@@ -18,22 +18,23 @@ export async function createMembershipPlan(gymId: string, input: MembershipPlanI
 export async function updateMembershipPlan(gymId: string, planId: string, input: UpdateMembershipPlanInput): Promise<SerializedMembershipPlan | null> { if (!isValidObjectId(planId)) return null; await connectToDatabase(); const plan = await MembershipPlanModel.findOneAndUpdate(tenant(gymId).filter({ _id: planId }), { $set: input }, { new: true, runValidators: true }).lean<IMembershipPlan>(); return plan ? serializePlan(plan) : null; }
 
 export async function listMemberships(gymId: string, options: { query?: string; status?: MembershipStatus; page?: number; pageSize?: number } = {}): Promise<{ memberships: SerializedMembership[]; total: number; page: number; pageSize: number; stats: MembershipStats }> {
-  await connectToDatabase(); const pageSize = Math.min(Math.max(options.pageSize ?? 12, 1), 50); const page = Math.max(options.page ?? 1, 1); const filters = tenant(gymId); const now = new Date(); const sevenDays = new Date(now); sevenDays.setDate(sevenDays.getDate() + 7); const extra: Record<string, unknown> = {};
-  if (options.status === MEMBERSHIP_STATUS.ACTIVE) extra.$or = [{ status: MEMBERSHIP_STATUS.ACTIVE, startDate: { $lte: now }, endDate: { $gte: now } }];
-  else if (options.status === MEMBERSHIP_STATUS.EXPIRED) extra.$or = [{ status: MEMBERSHIP_STATUS.EXPIRED }, { status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $lt: now } }];
-  else if (options.status) extra.status = options.status;
+  await connectToDatabase();
+  const pageSize = Math.min(Math.max(options.pageSize ?? 12, 1), 50); const page = Math.max(options.page ?? 1, 1); const filters = tenant(gymId); const now = new Date(); const sevenDays = new Date(now); sevenDays.setDate(sevenDays.getDate() + 7);
+  const extra: Record<string, unknown> = {};
   if (options.query?.trim()) { const ids = await MemberModel.find(tenant(gymId).filter({ $or: [{ name: { $regex: options.query.trim(), $options: "i" } }, { phone: { $regex: options.query.trim(), $options: "i" } }] })).distinct("_id"); extra.memberId = { $in: ids }; }
-  const filter = filters.filter(extra);
-  const [memberships, total, active, expiring, expired, cancelled] = await Promise.all([
-    MembershipModel.find(filter).sort({ startDate: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean<IMembership[]>(),
-    filters.count(MembershipModel, extra),
-    filters.count(MembershipModel, { status: MEMBERSHIP_STATUS.ACTIVE, startDate: { $lte: now }, endDate: { $gte: now } }),
-    filters.count(MembershipModel, { status: MEMBERSHIP_STATUS.ACTIVE, startDate: { $lte: now }, endDate: { $gte: now, $lte: sevenDays } }),
-    filters.count(MembershipModel, { $or: [{ status: MEMBERSHIP_STATUS.EXPIRED }, { status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $lt: now } }] }),
-    filters.count(MembershipModel, { status: MEMBERSHIP_STATUS.CANCELLED }),
-  ]);
-  const hydrated = await Promise.all(memberships.map(async (membership) => { const [member, plan] = await Promise.all([MemberModel.findOne(tenant(gymId).filter({ _id: membership.memberId })).lean(), MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean<IMembershipPlan>()]); return member && plan ? serializeMembership(membership, member, plan) : null; }));
-  return { memberships: hydrated.filter((item): item is SerializedMembership => item !== null), total, page, pageSize, stats: { total, active, expiring, expired, cancelled } };
+  const all = await MembershipModel.find(filters.filter(extra)).sort({ memberId: 1, startDate: -1, endDate: -1, createdAt: -1 }).lean<IMembership[]>();
+  const latestByMember = new Map<string, IMembership>();
+  for (const membership of all) { const key = membership.memberId.toString(); if (!latestByMember.has(key)) latestByMember.set(key, membership); }
+  const latest = Array.from(latestByMember.values());
+  const displayedStatus = (membership: IMembership): MembershipStatus => membership.status === MEMBERSHIP_STATUS.CANCELLED ? MEMBERSHIP_STATUS.CANCELLED : membership.endDate < now ? MEMBERSHIP_STATUS.EXPIRED : membership.status;
+  const filtered = options.status ? latest.filter((membership) => displayedStatus(membership) === options.status) : latest;
+  const active = latest.filter((membership) => displayedStatus(membership) === MEMBERSHIP_STATUS.ACTIVE && membership.startDate <= now && membership.endDate >= now).length;
+  const expiring = latest.filter((membership) => displayedStatus(membership) === MEMBERSHIP_STATUS.ACTIVE && membership.startDate <= now && membership.endDate >= now && membership.endDate <= sevenDays).length;
+  const expired = latest.filter((membership) => displayedStatus(membership) === MEMBERSHIP_STATUS.EXPIRED).length;
+  const cancelled = latest.filter((membership) => displayedStatus(membership) === MEMBERSHIP_STATUS.CANCELLED).length;
+  const paged = filtered.sort((a, b) => b.startDate.getTime() - a.startDate.getTime()).slice((page - 1) * pageSize, page * pageSize);
+  const hydrated = await Promise.all(paged.map(async (membership) => { const [member, plan] = await Promise.all([MemberModel.findOne(tenant(gymId).filter({ _id: membership.memberId })).lean(), MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean<IMembershipPlan>()]); return member && plan ? serializeMembership(membership, member, plan) : null; }));
+  return { memberships: hydrated.filter((item): item is SerializedMembership => item !== null), total: filtered.length, page, pageSize, stats: { total: latest.length, active, expiring, expired, cancelled } };
 }
 
 export async function createMembership(gymId: string, input: MembershipInput): Promise<SerializedMembership> { if (!isValidObjectId(input.memberId) || !isValidObjectId(input.planId)) throw new Error("Invalid member or membership plan"); await connectToDatabase(); const [member, plan] = await Promise.all([MemberModel.findOne(tenant(gymId).filter({ _id: input.memberId })).lean(), MembershipPlanModel.findOne(tenant(gymId).filter({ _id: input.planId })).lean<IMembershipPlan>()]); if (!member) throw new Error("Member not found"); if (!plan || !plan.isActive) throw new Error("Membership plan is unavailable"); const startDate = new Date(input.startDate); const endDate = new Date(input.endDate); const overlap = await MembershipModel.findOne(tenant(gymId).filter({ memberId: input.memberId, status: MEMBERSHIP_STATUS.ACTIVE, startDate: { $lte: endDate }, endDate: { $gte: startDate } })).lean(); if (overlap) throw new Error("This member already has an overlapping active membership"); const membership = await MembershipModel.create({ gymId: tenant(gymId).gymId, memberId: member._id, planId: plan._id, startDate, endDate, amount: input.amount, weightAtStart: input.weightAtStart, status: MEMBERSHIP_STATUS.ACTIVE }); if (member.status !== MEMBER_STATUS.ACTIVE) await MemberModel.updateOne(tenant(gymId).filter({ _id: member._id }), { $set: { status: MEMBER_STATUS.ACTIVE } }); return serializeMembership(membership, member, plan); }
