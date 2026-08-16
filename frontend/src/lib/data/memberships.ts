@@ -19,10 +19,13 @@ export async function updateMembershipPlan(gymId: string, planId: string, input:
 
 export async function listMemberships(gymId: string, options: { query?: string; status?: MembershipStatus; page?: number; pageSize?: number } = {}): Promise<{ memberships: SerializedMembership[]; total: number; page: number; pageSize: number; stats: MembershipStats }> {
   await connectToDatabase();
-  const pageSize = Math.min(Math.max(options.pageSize ?? 12, 1), 50); const page = Math.max(options.page ?? 1, 1); const filters = tenant(gymId); const extra: Record<string, unknown> = {};
-  if (options.status) extra.status = options.status;
+  const pageSize = Math.min(Math.max(options.pageSize ?? 12, 1), 50); const page = Math.max(options.page ?? 1, 1); const filters = tenant(gymId); const now = new Date(); const sevenDays = new Date(now); sevenDays.setDate(sevenDays.getDate() + 7);
+  const extra: Record<string, unknown> = {};
+  if (options.status === MEMBERSHIP_STATUS.ACTIVE) extra.$or = [{ status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: now } }];
+  else if (options.status === MEMBERSHIP_STATUS.EXPIRED) extra.$or = [{ status: MEMBERSHIP_STATUS.EXPIRED }, { status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $lt: now } }];
+  else if (options.status) extra.status = options.status;
   if (options.query?.trim()) { const ids = await MemberModel.find(tenant(gymId).filter({ $or: [{ name: { $regex: options.query.trim(), $options: "i" } }, { phone: { $regex: options.query.trim(), $options: "i" } }] })).distinct("_id"); extra.memberId = { $in: ids }; }
-  const filter = filters.filter(extra); const now = new Date(); const sevenDays = new Date(now); sevenDays.setDate(sevenDays.getDate() + 7);
+  const filter = filters.filter(extra);
   const [memberships, total, active, expiring, expired, cancelled] = await Promise.all([
     MembershipModel.find(filter).sort({ startDate: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean<IMembership[]>(),
     filters.count(MembershipModel, extra),
