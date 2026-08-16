@@ -16,26 +16,15 @@ function serialize(membership: IMembership, member: { _id: Types.ObjectId; name:
 export async function listMembershipExpiry(gymId: string, bucket?: ExpiryBucket, query?: string): Promise<{ memberships: ExpiryMembership[]; summary: ExpirySummary }> {
   await connectToDatabase();
   const today = startOfDate(new Date());
-  const inThirtyDays = new Date(today); inThirtyDays.setDate(inThirtyDays.getDate() + 30);
   const filters = tenant(gymId);
   const memberFilter: Record<string, unknown> = {};
   if (query?.trim()) { const ids = await MemberModel.find(filters.filter({ $or: [{ name: { $regex: query.trim(), $options: "i" } }, { phone: { $regex: query.trim(), $options: "i" } }] })).distinct("_id"); memberFilter.memberId = { $in: ids }; }
-
   const memberships = await MembershipModel.find(filters.filter({ status: { $ne: MEMBERSHIP_STATUS.CANCELLED }, ...memberFilter })).sort({ endDate: -1 }).lean<IMembership[]>();
   const latestByMember = new Map<string, IMembership>();
-  for (const membership of memberships) {
-    const key = membership.memberId.toString();
-    if (!latestByMember.has(key)) latestByMember.set(key, membership);
-  }
-
-  const hydrated = await Promise.all(Array.from(latestByMember.values()).map(async (membership) => {
-    const [member, plan] = await Promise.all([MemberModel.findOne(filters.filter({ _id: membership.memberId })).lean(), MembershipPlanModel.findOne(filters.filter({ _id: membership.planId })).lean<IMembershipPlan>()]);
-    return member && plan ? serialize(membership, member, plan, today) : null;
-  }));
-  const all = hydrated.filter((item): item is ExpiryMembership => item !== null && (item.daysLeft < 0 || item.daysLeft <= 30));
-  const inWindow = all.filter((item) => item.daysLeft < 0 || item.daysLeft <= 30 && item.daysLeft >= 0);
+  for (const membership of memberships) { const key = membership.memberId.toString(); if (!latestByMember.has(key)) latestByMember.set(key, membership); }
+  const hydrated = await Promise.all(Array.from(latestByMember.values()).map(async (membership) => { const [member, plan] = await Promise.all([MemberModel.findOne(filters.filter({ _id: membership.memberId })).lean(), MembershipPlanModel.findOne(filters.filter({ _id: membership.planId })).lean<IMembershipPlan>()]); return member && plan ? serialize(membership, member, plan, today) : null; }));
+  const inWindow = hydrated.filter((item): item is ExpiryMembership => item !== null && item.daysLeft <= 30);
   const filtered = bucket ? inWindow.filter((item) => item.bucket === bucket) : inWindow;
   const summary: ExpirySummary = { expired: inWindow.filter((item) => item.bucket === "EXPIRED").length, today: inWindow.filter((item) => item.bucket === "TODAY").length, threeDays: inWindow.filter((item) => item.bucket === "THREE_DAYS").length, sevenDays: inWindow.filter((item) => item.bucket === "SEVEN_DAYS").length, thirtyDays: inWindow.filter((item) => item.daysLeft >= 8 && item.daysLeft <= 30).length };
-  void inThirtyDays;
   return { memberships: filtered.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime()), summary };
 }
