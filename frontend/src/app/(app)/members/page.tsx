@@ -1,12 +1,9 @@
-import { Users } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+import { requireGymContext } from "@/lib/auth/guards";
+import { MembersClient } from "./_components/members-client";
 
-export default function MembersPage() {
-  return (
-    <ComingSoon
-      icon={Users}
-      title="Members"
-      description="Add, search and manage your gym members with profiles, photos and membership history."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function MembersPage() {
+  await requireGymContext();
+  return <MembersClient />;
 }
