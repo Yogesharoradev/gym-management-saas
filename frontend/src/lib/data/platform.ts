@@ -1,7 +1,12 @@
 import "server-only";
 import { connectToDatabase } from "@/lib/db";
 import { GymModel } from "@/models/gym.model";
-import { SUBSCRIPTION_STATUS, GYM_STATUS, type SubscriptionStatus, type GymStatus } from "@/lib/constants";
+import {
+  SUBSCRIPTION_STATUS,
+  GYM_STATUS,
+  type SubscriptionStatus,
+  type GymStatus,
+} from "@/lib/constants";
 
 export interface PlatformGym {
   id: string;
@@ -59,9 +64,7 @@ export async function getPlatformOverview(): Promise<PlatformOverview> {
     totalGyms: gyms.length,
     activeGyms: countBy(SUBSCRIPTION_STATUS.ACTIVE),
     pastDueGyms: countBy(SUBSCRIPTION_STATUS.PAST_DUE),
-    suspendedGyms:
-      countBy(SUBSCRIPTION_STATUS.SUSPENDED) +
-      gyms.filter((gym) => gym.status === GYM_STATUS.SUSPENDED).length,
+    suspendedGyms: countBy(SUBSCRIPTION_STATUS.SUSPENDED),
     cancelledGyms: countBy(SUBSCRIPTION_STATUS.CANCELLED),
     gyms,
   };
