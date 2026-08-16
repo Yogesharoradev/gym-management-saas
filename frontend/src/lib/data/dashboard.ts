@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import { AttendanceModel } from "@/models/attendance.model";
 import { MemberModel } from "@/models/member.model";
 import { MembershipModel, type IMembership } from "@/models/membership.model";
+import { MembershipPlanModel } from "@/models/membership-plan.model";
 import { PaymentModel } from "@/models/payment.model";
 import { MEMBERSHIP_STATUS, MEMBER_STATUS } from "@/lib/constants";
 
@@ -14,7 +15,6 @@ function endOfDay(date: Date): Date { const value = startOfDay(date); value.setD
 export async function getGymDashboardData(gymId: string): Promise<DashboardData> {
   await connectToDatabase(); if (!Types.ObjectId.isValid(gymId)) throw new Error("Invalid gym id");
   const tenantId = new Types.ObjectId(gymId); const now = new Date(); const todayStart = startOfDay(now); const tomorrowStart = endOfDay(now); const sevenDaysFromNow = new Date(now); sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
   const latestMemberships = await MembershipModel.aggregate<IMembership>([
     { $match: { gymId: tenantId } },
     { $sort: { memberId: 1, endDate: -1, startDate: -1, createdAt: -1 } },
@@ -40,16 +40,6 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
 
   const revenueByDate = new Map(revenueDocs.map((item) => [item._id, item.revenue]));
   const revenueSeries = Array.from({ length: 7 }, (_, index) => { const date = new Date(todayStart); date.setDate(todayStart.getDate() - (6 - index)); const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; return { day: new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date), revenue: revenueByDate.get(key) ?? 0 }; });
-
-  const expiringMembers = await Promise.all(expiringDocs.map(async (membership) => {
-    const [member, plan] = await Promise.all([
-      MemberModel.findOne({ _id: membership.memberId, gymId: tenantId }).lean<{ name: string }>(),
-      MembershipModel.findOne({ _id: membership._id, gymId: tenantId }).lean<IMembership>(),
-    ]);
-    const planDoc = plan ? await (await import("@/models/membership-plan.model")).MembershipPlanModel.findOne({ _id: plan.planId, gymId: tenantId }).lean<{ name: string }>() : null;
-    const days = Math.max(0, Math.ceil((new Date(membership.endDate).getTime() - todayStart.getTime()) / 86400000));
-    return { id: membership._id.toString(), name: member?.name ?? "Unknown member", plan: planDoc?.name ?? "Membership", endsIn: days === 0 ? "Today" : `${days} ${days === 1 ? "day" : "days"}` };
-  }));
-
+  const expiringMembers = await Promise.all(expiringDocs.map(async (membership) => { const [member, plan] = await Promise.all([MemberModel.findOne({ _id: membership.memberId, gymId: tenantId }).lean<{ name: string }>(), MembershipPlanModel.findOne({ _id: membership.planId, gymId: tenantId }).lean<{ name: string }>()]); const days = Math.max(0, Math.ceil((new Date(membership.endDate).getTime() - todayStart.getTime()) / 86400000)); return { id: membership._id.toString(), name: member?.name ?? "Unknown member", plan: plan?.name ?? "Membership", endsIn: days === 0 ? "Today" : `${days} ${days === 1 ? "day" : "days"}` }; }));
   return { totalMembers, activeMembers, inactiveMembers, expiringSoon: expiringMemberships.length, expiredMembers: expiredMemberships.length, todayAttendance, todayCollection: todayCollectionResult[0]?.total ?? 0, pendingPayments: pendingResult[0]?.total ?? 0, revenueSeries, expiringMembers };
 }
