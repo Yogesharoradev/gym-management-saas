@@ -14,6 +14,7 @@ import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 
 interface LoginResponse {
   redirectTo?: string;
+  mustChangePassword?: boolean;
   error?: string;
 }
 
@@ -44,7 +45,11 @@ export function LoginForm() {
         setServerError(data.error ?? "Unable to sign in. Please try again.");
         return;
       }
-      const target = searchParams.get("redirect") || data.redirectTo || "/dashboard";
+
+      const target = data.mustChangePassword
+        ? "/change-password"
+        : searchParams.get("redirect") || data.redirectTo || "/dashboard";
+
       router.replace(target);
       router.refresh();
     } catch {
