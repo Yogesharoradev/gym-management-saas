@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Chivo, DM_Sans, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalRouteLoader } from "@/components/global-route-loader";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <body className={`${chivo.variable} ${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <GlobalRouteLoader />
           {children}
           <Toaster position="top-right" richColors />
         </ThemeProvider>
