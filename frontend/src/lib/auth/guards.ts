@@ -4,24 +4,18 @@ import { getAuthState, isGymAccessible, type AuthState } from "@/lib/auth/sessio
 import { ROLES } from "@/lib/constants";
 import type { GymSummary, SessionUser } from "@/types";
 
-/** Requires any authenticated user. Redirects to /login otherwise. */
 export async function requireAuth(): Promise<AuthState> {
   const state = await getAuthState();
   if (!state) redirect("/login");
   return state;
 }
 
-/** Requires a SUPER_ADMIN. */
 export async function requireSuperAdmin(): Promise<{ user: SessionUser }> {
   const state = await requireAuth();
   if (state.user.role !== ROLES.SUPER_ADMIN) redirect("/dashboard");
   return { user: state.user };
 }
 
-/**
- * Requires a gym-scoped user (GYM_ADMIN or STAFF) with a valid gym.
- * Super admins are redirected to their own area.
- */
 export async function requireGymContext(): Promise<{
   user: SessionUser;
   gym: GymSummary;
@@ -29,6 +23,7 @@ export async function requireGymContext(): Promise<{
   const state = await requireAuth();
   if (state.user.role === ROLES.SUPER_ADMIN) redirect("/super-admin");
   if (!state.gym || !state.user.gymId) redirect("/login");
+  if (state.user.mustChangePassword) redirect("/change-password");
   if (!isGymAccessible(state.gym)) redirect("/suspended");
   return { user: state.user, gym: state.gym };
 }
