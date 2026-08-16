@@ -24,15 +24,16 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   }
-  const { email } = parsed.data;
 
+  const { email } = parsed.data;
   await connectToDatabase();
   const user = await UserModel.findOne({ email, isActive: true });
 
-  // Do not reveal whether the account exists — always return the same response.
+  // Never reveal whether an account exists.
   if (user) {
     await PasswordResetTokenModel.deleteMany({ userId: user._id });
     const { raw, hash } = generateResetToken();
+
     await PasswordResetTokenModel.create({
       userId: user._id,
       tokenHash: hash,
@@ -40,13 +41,17 @@ export async function POST(request: NextRequest) {
       usedAt: null,
     });
 
-    // No email provider is configured yet — log the reset link server-side.
-    // Replace this with the email integration when available (see summary/docs).
     const origin = request.headers.get("origin") ?? "";
+    const resetUrl = `${origin || "http://localhost:3000"}/reset-password?token=${raw}`;
+
+    // Email delivery is not configured yet. Keep the URL server-side in
+    // production; expose it only in development so the reset flow can be tested.
     // eslint-disable-next-line no-console
-    console.log(
-      `[password-reset] link for ${email}: ${origin}/reset-password?token=${raw}`,
-    );
+    console.log(`[password-reset] link for ${email}: ${resetUrl}`);
+
+    if (process.env.NODE_ENV !== "production") {
+      return jsonOk({ message: GENERIC_MESSAGE, resetUrl });
+    }
   }
 
   return jsonOk({ message: GENERIC_MESSAGE });
