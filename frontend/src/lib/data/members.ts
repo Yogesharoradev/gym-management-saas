@@ -6,7 +6,17 @@ import { MembershipModel } from "@/models/membership.model";
 import { MembershipPlanModel } from "@/models/membership-plan.model";
 import { tenant } from "@/lib/data/tenant";
 import type { MemberInput, UpdateMemberInput } from "@/lib/validation/member";
-import { MEMBER_STATUS, type MemberStatus } from "@/lib/constants";
+import { MEMBER_STATUS, MEMBERSHIP_STATUS, type MemberStatus, type MembershipStatus } from "@/lib/constants";
+
+export interface SerializedMemberMembership {
+  id: string;
+  plan: string;
+  startDate: string;
+  endDate: string;
+  amount: number;
+  weightAtStart: number | null;
+  status: MembershipStatus;
+}
 
 export interface SerializedMember {
   id: string;
@@ -20,14 +30,7 @@ export interface SerializedMember {
   photo: string | null;
   joiningDate: string;
   status: MemberStatus;
-  membership: {
-    id: string;
-    plan: string;
-    startDate: string;
-    endDate: string;
-    amount: number;
-    status: string;
-  } | null;
+  membership: SerializedMemberMembership | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,11 +43,16 @@ export interface MemberListStats {
   withMembership: number;
 }
 
+export interface MemberProfileData {
+  member: SerializedMember;
+  membershipHistory: SerializedMemberMembership[];
+}
+
 function serializeDate(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
 }
 
-export function serializeMember(member: IMember, membership: SerializedMember["membership"] = null): SerializedMember {
+export function serializeMember(member: IMember, membership: SerializedMemberMembership | null = null): SerializedMember {
   return {
     id: member._id.toString(),
     name: member.name,
@@ -63,18 +71,38 @@ export function serializeMember(member: IMember, membership: SerializedMember["m
   };
 }
 
-async function getMembership(gymId: string, memberId: string): Promise<SerializedMember["membership"]> {
-  const membership = await MembershipModel.findOne(tenant(gymId).filter({ memberId })).sort({ endDate: -1 }).lean();
-  if (!membership) return null;
+async function serializeMembership(gymId: string, membership: { _id: { toString(): string }; planId: unknown; startDate: Date; endDate: Date; amount: number; weightAtStart: number | null; status: MembershipStatus }): Promise<SerializedMemberMembership> {
   const plan = await MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean();
+  const displayedStatus: MembershipStatus = membership.status === MEMBERSHIP_STATUS.CANCELLED
+    ? MEMBERSHIP_STATUS.CANCELLED
+    : membership.endDate < new Date()
+      ? MEMBERSHIP_STATUS.EXPIRED
+      : membership.status;
   return {
     id: membership._id.toString(),
     plan: plan?.name ?? "Membership plan",
     startDate: membership.startDate.toISOString(),
     endDate: membership.endDate.toISOString(),
     amount: membership.amount,
-    status: membership.status,
+    weightAtStart: membership.weightAtStart,
+    status: displayedStatus,
   };
+}
+
+async function getMembership(gymId: string, memberId: string): Promise<SerializedMemberMembership | null> {
+  const membership = await MembershipModel.findOne(tenant(gymId).filter({ memberId })).sort({ startDate: -1, endDate: -1, createdAt: -1 }).lean();
+  if (!membership) return null;
+  return serializeMembership(gymId, membership);
+}
+
+export async function getMemberProfileData(gymId: string, memberId: string): Promise<MemberProfileData | null> {
+  if (!isValidObjectId(memberId)) return null;
+  await connectToDatabase();
+  const member = await MemberModel.findOne(tenant(gymId).filter({ _id: memberId })).lean<IMember>();
+  if (!member) return null;
+  const memberships = await MembershipModel.find(tenant(gymId).filter({ memberId })).sort({ startDate: -1, endDate: -1, createdAt: -1 }).lean();
+  const history = await Promise.all(memberships.map((membership) => serializeMembership(gymId, membership)));
+  return { member: serializeMember(member, history[0] ?? null), membershipHistory: history };
 }
 
 export async function listMembers(
@@ -96,7 +124,6 @@ export async function listMembers(
     ];
   }
   const filter = filters.filter(extra);
-
   const [members, total, active, frozen, inactive, memberIdsWithMembership] = await Promise.all([
     MemberModel.find(filter).sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean<IMember[]>(),
     filters.count(MemberModel),
@@ -105,15 +132,8 @@ export async function listMembers(
     filters.count(MemberModel, { status: MEMBER_STATUS.INACTIVE }),
     MembershipModel.distinct("memberId", filters.filter({})),
   ]);
-
   const serialized = await Promise.all(members.map(async (member) => serializeMember(member, await getMembership(gymId, member._id.toString()))));
-  return {
-    members: serialized,
-    total,
-    page,
-    pageSize,
-    stats: { total, active, frozen, inactive, withMembership: memberIdsWithMembership.length },
-  };
+  return { members: serialized, total, page, pageSize, stats: { total, active, frozen, inactive, withMembership: memberIdsWithMembership.length } };
 }
 
 export async function getMemberById(gymId: string, memberId: string): Promise<SerializedMember | null> {
@@ -126,13 +146,7 @@ export async function getMemberById(gymId: string, memberId: string): Promise<Se
 
 export async function createMember(gymId: string, input: MemberInput): Promise<SerializedMember> {
   await connectToDatabase();
-  const member = await MemberModel.create({
-    ...input,
-    gymId: tenant(gymId).gymId,
-    dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
-    joiningDate: new Date(input.joiningDate),
-    status: MEMBER_STATUS.ACTIVE,
-  });
+  const member = await MemberModel.create({ ...input, gymId: tenant(gymId).gymId, dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null, joiningDate: new Date(input.joiningDate), status: MEMBER_STATUS.ACTIVE });
   return serializeMember(member);
 }
 
