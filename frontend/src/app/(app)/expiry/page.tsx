@@ -1,12 +1,9 @@
-import { Clock } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+import { requireGymContext } from "@/lib/auth/guards";
+import { ExpiryClient } from "./_components/expiry-client";
 
-export default function ExpiryPage() {
-  return (
-    <ComingSoon
-      icon={Clock}
-      title="Expiry &amp; Renewals"
-      description="Stay ahead of expiring memberships and send timely renewal reminders to members."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function ExpiryPage() {
+  await requireGymContext();
+  return <ExpiryClient />;
 }
