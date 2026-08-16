@@ -55,8 +55,8 @@ function serialize(membership: IMembership, member: { _id: Types.ObjectId; name:
 export async function listMembershipExpiry(gymId: string, bucket?: ExpiryBucket, query?: string): Promise<{ memberships: ExpiryMembership[]; summary: ExpirySummary }> {
   await connectToDatabase();
   const today = startOfDate(new Date());
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-  const inThirtyDays = new Date(today); inThirtyDays.setDate(inThirtyDays.getDate() + 30);
+  const inThirtyDays = new Date(today);
+  inThirtyDays.setDate(inThirtyDays.getDate() + 30);
   const filters = tenant(gymId);
   const memberFilter: Record<string, unknown> = {};
   if (query?.trim()) {
@@ -64,10 +64,7 @@ export async function listMembershipExpiry(gymId: string, bucket?: ExpiryBucket,
     memberFilter.memberId = { $in: ids };
   }
 
-  const dateFilter: Record<string, unknown> = { $or: [
-    { endDate: { $gte: today, $lt: inThirtyDays } },
-    { endDate: { $lt: today } },
-  ] };
+  const dateFilter: Record<string, unknown> = { $or: [{ endDate: { $gte: today, $lt: inThirtyDays } }, { endDate: { $lt: today } }] };
   const memberships = await MembershipModel.find(filters.filter({ status: { $ne: MEMBERSHIP_STATUS.CANCELLED }, ...memberFilter, ...dateFilter })).sort({ endDate: 1 }).lean<IMembership[]>();
 
   const hydrated = await Promise.all(memberships.map(async (membership) => {
