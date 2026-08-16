@@ -6,6 +6,7 @@ export interface SessionUser {
   email: string;
   role: Role;
   gymId: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface GymSummary {
