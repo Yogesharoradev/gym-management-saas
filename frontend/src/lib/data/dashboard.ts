@@ -1,10 +1,11 @@
 import "server-only";
+import { Types } from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { AttendanceModel } from "@/models/attendance.model";
 import { MemberModel } from "@/models/member.model";
 import { MembershipModel } from "@/models/membership.model";
 import { PaymentModel } from "@/models/payment.model";
-import { MEMBERSHIP_STATUS, MEMBER_STATUS } from "@/lib/constants";
+import { MEMBERSHIP_STATUS } from "@/lib/constants";
 
 export interface DashboardData {
   totalMembers: number;
@@ -30,7 +31,11 @@ function endOfDay(date: Date): Date {
 
 export async function getGymDashboardData(gymId: string): Promise<DashboardData> {
   await connectToDatabase();
+  if (!Types.ObjectId.isValid(gymId)) {
+    throw new Error("Invalid gym id");
+  }
 
+  const tenantId = new Types.ObjectId(gymId);
   const now = new Date();
   const todayStart = startOfDay(now);
   const tomorrowStart = endOfDay(now);
@@ -48,28 +53,25 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
     expiringDocs,
     revenueDocs,
   ] = await Promise.all([
-    MemberModel.countDocuments({ gymId }),
+    MemberModel.countDocuments({ gymId: tenantId }),
     MembershipModel.aggregate<{ count: number }>([
-      { $match: { gymId, status: MEMBERSHIP_STATUS.ACTIVE } },
+      { $match: { gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE } },
       { $group: { _id: "$memberId" } },
       { $count: "count" },
     ]),
     MembershipModel.countDocuments({
-      gymId,
+      gymId: tenantId,
       status: MEMBERSHIP_STATUS.ACTIVE,
       endDate: { $gte: now, $lte: sevenDaysFromNow },
     }),
-    MembershipModel.countDocuments({ gymId, status: MEMBERSHIP_STATUS.EXPIRED }),
-    AttendanceModel.countDocuments({
-      gymId,
-      date: { $gte: todayStart, $lt: tomorrowStart },
-    }),
+    MembershipModel.countDocuments({ gymId: tenantId, status: MEMBERSHIP_STATUS.EXPIRED }),
+    AttendanceModel.countDocuments({ gymId: tenantId, date: { $gte: todayStart, $lt: tomorrowStart } }),
     PaymentModel.aggregate<{ total: number }>([
-      { $match: { gymId, paymentDate: { $gte: todayStart, $lt: tomorrowStart } } },
+      { $match: { gymId: tenantId, paymentDate: { $gte: todayStart, $lt: tomorrowStart } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
     MembershipModel.aggregate<{ total: number }>([
-      { $match: { gymId, status: { $ne: MEMBERSHIP_STATUS.CANCELLED } } },
+      { $match: { gymId: tenantId, status: { $ne: MEMBERSHIP_STATUS.CANCELLED } } },
       {
         $lookup: {
           from: "payments",
@@ -84,10 +86,7 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
       {
         $project: {
           balance: {
-            $max: [
-              0,
-              { $subtract: ["$amount", { $ifNull: [{ $arrayElemAt: ["$paymentTotals.paid", 0] }, 0] }] },
-            ],
+            $max: [0, { $subtract: ["$amount", { $ifNull: [{ $arrayElemAt: ["$paymentTotals.paid", 0] }, 0] }] }],
           },
         },
       },
@@ -95,25 +94,19 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
     ]),
     MembershipModel.aggregate<{
       _id: unknown;
-      memberId: unknown;
       endDate: Date;
       member: Array<{ name: string }>;
       plan: Array<{ name: string }>;
     }>([
-      { $match: { gymId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: now, $lte: sevenDaysFromNow } } },
+      { $match: { gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: now, $lte: sevenDaysFromNow } } },
       { $sort: { endDate: 1 } },
       { $limit: 6 },
       { $lookup: { from: "members", localField: "memberId", foreignField: "_id", as: "member" } },
       { $lookup: { from: "membershipplans", localField: "planId", foreignField: "_id", as: "plan" } },
     ]),
     PaymentModel.aggregate<{ _id: string; revenue: number }>([
-      { $match: { gymId, paymentDate: { $gte: new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000), $lt: tomorrowStart } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate" } },
-          revenue: { $sum: "$amount" },
-        },
-      },
+      { $match: { gymId: tenantId, paymentDate: { $gte: new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000), $lt: tomorrowStart } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate" } }, revenue: { $sum: "$amount" } } },
       { $sort: { _id: 1 } },
     ]),
   ]);
@@ -123,15 +116,11 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
     const date = new Date(todayStart);
     date.setDate(todayStart.getDate() - (6 - index));
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    return {
-      day: new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date),
-      revenue: revenueByDate.get(key) ?? 0,
-    };
+    return { day: new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date), revenue: revenueByDate.get(key) ?? 0 };
   });
 
   const expiringMembers = expiringDocs.map((item) => {
-    const endDate = new Date(item.endDate);
-    const days = Math.max(1, Math.ceil((endDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+    const days = Math.max(1, Math.ceil((new Date(item.endDate).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
     return {
       id: String(item._id),
       name: item.member[0]?.name ?? "Unknown member",
