@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api";
-import { getAuthState } from "@/lib/auth/session";
+import { getAuthState, setSessionCookie } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { firstLoginPasswordSchema } from "@/lib/validation/auth";
 import { ROLES } from "@/lib/constants";
@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
   user.mustChangePassword = false;
   user.passwordChangedAt = new Date();
   await user.save();
+
+  await setSessionCookie({
+    sub: String(user._id),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    gymId: user.gymId ? String(user.gymId) : null,
+  });
 
   return jsonOk({ success: true, redirectTo: "/dashboard" });
 }
