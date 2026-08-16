@@ -1,5 +1,6 @@
-import { Info, Clock, ArrowUpRight } from "lucide-react";
+import { Info, Clock, ArrowUpRight, AlertTriangle } from "lucide-react";
 import { requireGymContext } from "@/lib/auth/guards";
+import { getGymAccessInfo } from "@/lib/auth/session";
 import { StatCard } from "@/components/stat-card";
 import { RevenueChart } from "@/components/charts/revenue-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +14,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function formatDate(date: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
 export default async function DashboardPage() {
   const { gym } = await requireGymContext();
+  const access = getGymAccessInfo(gym);
 
   return (
     <div className="space-y-6">
@@ -24,6 +34,37 @@ export default async function DashboardPage() {
           Dashboard
         </h2>
       </div>
+
+      {access.inGracePeriod ? (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
+          data-testid="subscription-grace-banner"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <p className="text-sm font-semibold">
+                  Your subscription has expired
+                </p>
+                <Badge className="w-fit border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                  {access.graceDaysRemaining} {access.graceDaysRemaining === 1 ? "day" : "days"} remaining
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-amber-800/90 dark:text-amber-200/80">
+                Your subscription ended on {gym.subscriptionEndDate ? formatDate(gym.subscriptionEndDate) : "the expiry date"}. You are currently in the 7-day grace period. Please contact the administrator to renew your subscription before access is paused.
+              </p>
+              {access.gracePeriodEndsAt ? (
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                  Grace period ends on {formatDate(access.gracePeriodEndsAt)}.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {IS_MOCK_DATA ? (
         <div
