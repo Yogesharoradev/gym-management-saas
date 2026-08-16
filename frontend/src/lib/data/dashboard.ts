@@ -20,15 +20,8 @@ export interface DashboardData {
   expiringMembers: Array<{ id: string; name: string; plan: string; endsIn: string }>;
 }
 
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function endOfDay(date: Date): Date {
-  const value = startOfDay(date);
-  value.setDate(value.getDate() + 1);
-  return value;
-}
+function startOfDay(date: Date): Date { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
+function endOfDay(date: Date): Date { const value = startOfDay(date); value.setDate(value.getDate() + 1); return value; }
 
 export async function getGymDashboardData(gymId: string): Promise<DashboardData> {
   await connectToDatabase();
@@ -41,23 +34,12 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
   const sevenDaysFromNow = new Date(now);
   sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
-  const [
-    totalMembers,
-    activeMembers,
-    inactiveMembers,
-    expiringSoon,
-    expiredMembers,
-    todayAttendance,
-    todayCollectionResult,
-    pendingResult,
-    expiringDocs,
-    revenueDocs,
-  ] = await Promise.all([
+  const [totalMembers, activeMembers, inactiveMembers, expiringSoon, expiredMembers, todayAttendance, todayCollectionResult, pendingResult, expiringDocs, revenueDocs] = await Promise.all([
     MemberModel.countDocuments({ gymId: tenantId }),
     MemberModel.countDocuments({ gymId: tenantId, status: MEMBER_STATUS.ACTIVE }),
     MemberModel.countDocuments({ gymId: tenantId, status: MEMBER_STATUS.INACTIVE }),
-    MembershipModel.countDocuments({ gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: now, $lte: sevenDaysFromNow } }),
-    MembershipModel.countDocuments({ gymId: tenantId, status: MEMBERSHIP_STATUS.EXPIRED }),
+    MembershipModel.countDocuments({ gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: todayStart, $lte: sevenDaysFromNow } }),
+    MembershipModel.countDocuments({ gymId: tenantId, $or: [{ status: MEMBERSHIP_STATUS.EXPIRED }, { status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $lt: todayStart } }] }),
     AttendanceModel.countDocuments({ gymId: tenantId, date: { $gte: todayStart, $lt: tomorrowStart } }),
     PaymentModel.aggregate<{ total: number }>([
       { $match: { gymId: tenantId, paymentDate: { $gte: todayStart, $lt: tomorrowStart } } },
@@ -70,7 +52,7 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
       { $group: { _id: null, total: { $sum: "$balance" } } },
     ]),
     MembershipModel.aggregate<{ _id: unknown; endDate: Date; member: Array<{ name: string }>; plan: Array<{ name: string }> }>([
-      { $match: { gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: now, $lte: sevenDaysFromNow } } },
+      { $match: { gymId: tenantId, status: MEMBERSHIP_STATUS.ACTIVE, endDate: { $gte: todayStart, $lte: sevenDaysFromNow } } },
       { $sort: { endDate: 1 } },
       { $limit: 6 },
       { $lookup: { from: "members", localField: "memberId", foreignField: "_id", as: "member" } },
@@ -92,20 +74,9 @@ export async function getGymDashboardData(gymId: string): Promise<DashboardData>
   });
 
   const expiringMembers = expiringDocs.map((item) => {
-    const days = Math.max(1, Math.ceil((new Date(item.endDate).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
-    return { id: String(item._id), name: item.member[0]?.name ?? "Unknown member", plan: item.plan[0]?.name ?? "Membership", endsIn: `${days} ${days === 1 ? "day" : "days"}` };
+    const days = Math.max(0, Math.ceil((new Date(item.endDate).getTime() - todayStart.getTime()) / 86400000));
+    return { id: String(item._id), name: item.member[0]?.name ?? "Unknown member", plan: item.plan[0]?.name ?? "Membership", endsIn: days === 0 ? "Today" : `${days} ${days === 1 ? "day" : "days"}` };
   });
 
-  return {
-    totalMembers,
-    activeMembers,
-    inactiveMembers,
-    expiringSoon,
-    expiredMembers,
-    todayAttendance,
-    todayCollection: todayCollectionResult[0]?.total ?? 0,
-    pendingPayments: pendingResult[0]?.total ?? 0,
-    revenueSeries,
-    expiringMembers,
-  };
+  return { totalMembers, activeMembers, inactiveMembers, expiringSoon, expiredMembers, todayAttendance, todayCollection: todayCollectionResult[0]?.total ?? 0, pendingPayments: pendingResult[0]?.total ?? 0, revenueSeries, expiringMembers };
 }
