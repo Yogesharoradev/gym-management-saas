@@ -9,10 +9,7 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <ImportMembersButton />
-      </div>
-      <MembersClient />
+      <MembersClient actions={<ImportMembersButton />} />
     </div>
   );
 }
