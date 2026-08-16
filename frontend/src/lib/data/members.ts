@@ -32,6 +32,14 @@ export interface SerializedMember {
   updatedAt: string;
 }
 
+export interface MemberListStats {
+  total: number;
+  active: number;
+  frozen: number;
+  inactive: number;
+  withMembership: number;
+}
+
 function serializeDate(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
 }
@@ -72,7 +80,7 @@ async function getMembership(gymId: string, memberId: string): Promise<Serialize
 export async function listMembers(
   gymId: string,
   options: { query?: string; status?: MemberStatus; page?: number; pageSize?: number } = {},
-): Promise<{ members: SerializedMember[]; total: number; page: number; pageSize: number }> {
+): Promise<{ members: SerializedMember[]; total: number; page: number; pageSize: number; stats: MemberListStats }> {
   await connectToDatabase();
   const pageSize = Math.min(Math.max(options.pageSize ?? 12, 1), 50);
   const page = Math.max(options.page ?? 1, 1);
@@ -88,12 +96,24 @@ export async function listMembers(
     ];
   }
   const filter = filters.filter(extra);
-  const [members, total] = await Promise.all([
+
+  const [members, total, active, frozen, inactive, memberIdsWithMembership] = await Promise.all([
     MemberModel.find(filter).sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean<IMember[]>(),
-    MemberModel.countDocuments(filter),
+    filters.count(MemberModel),
+    filters.count(MemberModel, { status: MEMBER_STATUS.ACTIVE }),
+    filters.count(MemberModel, { status: MEMBER_STATUS.FROZEN }),
+    filters.count(MemberModel, { status: MEMBER_STATUS.INACTIVE }),
+    MembershipModel.distinct("memberId", filters.filter({})),
   ]);
+
   const serialized = await Promise.all(members.map(async (member) => serializeMember(member, await getMembership(gymId, member._id.toString()))));
-  return { members: serialized, total, page, pageSize };
+  return {
+    members: serialized,
+    total,
+    page,
+    pageSize,
+    stats: { total, active, frozen, inactive, withMembership: memberIdsWithMembership.length },
+  };
 }
 
 export async function getMemberById(gymId: string, memberId: string): Promise<SerializedMember | null> {
