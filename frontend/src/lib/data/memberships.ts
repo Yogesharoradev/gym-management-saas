@@ -1,5 +1,6 @@
 import "server-only";
 import { isValidObjectId } from "mongoose";
+import { connectToDatabase } from "@/lib/db";
 import { MembershipModel, type IMembership } from "@/models/membership.model";
 import { MembershipPlanModel, type IMembershipPlan } from "@/models/membership-plan.model";
 import { MemberModel } from "@/models/member.model";
