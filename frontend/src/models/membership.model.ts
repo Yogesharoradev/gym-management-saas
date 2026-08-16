@@ -9,6 +9,7 @@ export interface IMembership {
   startDate: Date;
   endDate: Date;
   amount: number;
+  weightAtStart: number | null;
   status: MembershipStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const membershipSchema = new Schema<IMembership>(
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true, index: true },
     amount: { type: Number, required: true, min: 0 },
+    weightAtStart: { type: Number, default: null, min: 0 },
     status: {
       type: String,
       enum: Object.values(MEMBERSHIP_STATUS),
