@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
   await clearAttempts(identifier);
 
   const gymId = user.gymId ? String(user.gymId) : null;
+  const mustChangePassword = user.role === ROLES.GYM_ADMIN && user.mustChangePassword === true;
+
   await setSessionCookie({
     sub: String(user._id),
     name: user.name,
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
   const redirectTo =
     user.role === ROLES.SUPER_ADMIN
       ? "/super-admin"
-      : user.mustChangePassword
+      : mustChangePassword
         ? "/change-password"
         : "/dashboard";
 
@@ -86,8 +88,10 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role,
       gymId,
+      mustChangePassword,
     },
     gym,
+    mustChangePassword,
     redirectTo,
   });
 }
