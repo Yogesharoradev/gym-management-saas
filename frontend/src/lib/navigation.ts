@@ -2,11 +2,7 @@ import {
   LayoutDashboard,
   Users,
   CreditCard,
-  CalendarCheck,
-  IndianRupee,
   Clock,
-  BarChart3,
-  Megaphone,
   Settings,
   Building2,
   Receipt,
@@ -23,11 +19,7 @@ export const GYM_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Members", href: "/members", icon: Users },
   { label: "Memberships", href: "/memberships", icon: CreditCard },
-  { label: "Attendance", href: "/attendance", icon: CalendarCheck },
-  { label: "Payments", href: "/payments", icon: IndianRupee },
   { label: "Expiry", href: "/expiry", icon: Clock },
-  { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Announcements", href: "/announcements", icon: Megaphone },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
