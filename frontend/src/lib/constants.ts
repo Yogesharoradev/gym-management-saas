@@ -20,6 +20,9 @@ export const SUBSCRIPTION_STATUS = {
 export type SubscriptionStatus =
   (typeof SUBSCRIPTION_STATUS)[keyof typeof SUBSCRIPTION_STATUS];
 
+/** Number of days a gym can continue using the product after subscription expiry. */
+export const SUBSCRIPTION_GRACE_PERIOD_DAYS = 7;
+
 export const MEMBER_STATUS = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",
