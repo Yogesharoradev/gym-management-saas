@@ -45,80 +45,97 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="overline">{gym.name}</p>
-            <h2 className="mt-1 font-heading text-2xl font-black tracking-tighter sm:text-3xl">
+      <section className="relative isolate overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.06] p-5 shadow-sm sm:p-7">
+        <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-400/[0.06] blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="overline text-primary">{gym.name}</p>
+              <Badge variant="muted" className="rounded-full">Live data</Badge>
+            </div>
+            <h2 className="mt-2 font-heading text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
               Welcome back, {user.name.split(" ")[0]}.
             </h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              Here&apos;s what&apos;s happening across your gym today.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+              Your gym at a glance — members, attendance, collections and renewals that need attention today.
             </p>
           </div>
-          <Badge variant="muted" className="w-fit">Live data</Badge>
+          <div className="hidden shrink-0 rounded-xl border border-border/70 bg-background/50 px-4 py-3 text-right sm:block">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Today</p>
+            <p className="mt-1 text-sm font-semibold">{new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date())}</p>
+          </div>
         </div>
       </section>
 
       {access.inGracePeriod ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100" data-testid="subscription-grace-banner">
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20 sm:p-5" data-testid="subscription-grace-banner">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <p className="text-sm font-semibold">Your subscription has expired</p>
-                <Badge className="w-fit border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-bold">Your subscription has expired</p>
+                <Badge className="w-fit rounded-full border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
                   {access.graceDaysRemaining} {access.graceDaysRemaining === 1 ? "day" : "days"} remaining
                 </Badge>
               </div>
               <p className="mt-1 text-sm leading-6 text-amber-800/90 dark:text-amber-200/80">
                 Your subscription ended on {gym.subscriptionEndDate ? formatDate(gym.subscriptionEndDate) : "the expiry date"}. You are in the 7-day grace period. Please contact the administrator to renew before access is paused.
               </p>
-              {access.gracePeriodEndsAt ? <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">Grace period ends on {formatDate(access.gracePeriodEndsAt)}.</p> : null}
+              {access.gracePeriodEndsAt ? <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">Grace period ends on {formatDate(access.gracePeriodEndsAt)}.</p> : null}
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.key} testId={`stat-${stat.key}`} label={stat.label} value={stat.value} helper={stat.helper} icon={stat.icon} accent={stat.accent} />
-        ))}
-      </div>
+      <section>
+        <div className="mb-3 flex items-center justify-between px-0.5">
+          <div>
+            <h3 className="font-heading text-sm font-bold">Gym overview</h3>
+            <p className="text-xs text-muted-foreground">Live metrics from your gym</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          {stats.map((stat) => (
+            <StatCard key={stat.key} testId={`stat-${stat.key}`} label={stat.label} value={stat.value} helper={stat.helper} icon={stat.icon} accent={stat.accent} />
+          ))}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="overflow-hidden lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 sm:px-6">
+        <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pb-2 sm:px-6">
             <div>
-              <CardTitle>Revenue</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">Last 7 days</p>
+              <CardTitle className="text-base">Revenue</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Collection trend for the last 7 days</p>
             </div>
-            <Badge variant="muted">Live</Badge>
+            <Badge variant="muted" className="rounded-full">Live</Badge>
           </CardHeader>
-          <CardContent className="px-2 pb-4 sm:px-6 sm:pb-6">
+          <CardContent className="px-2 pb-4 sm:px-4 sm:pb-5">
             <RevenueChart data={dashboard.revenueSeries} />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-2xl border-border/70 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle>Expiring Soon</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Next 7 days</p>
+              <CardTitle className="text-base">Expiring Soon</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Memberships ending in 7 days</p>
             </div>
-            <Clock3 className="h-4 w-4 text-muted-foreground" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Clock3 className="h-4 w-4" />
+            </span>
           </CardHeader>
           <CardContent className="space-y-2">
             {dashboard.expiringMembers.length > 0 ? dashboard.expiringMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 transition-colors hover:border-foreground/20" data-testid={`expiring-member-${member.id}`}>
+              <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 transition-colors hover:border-primary/20 hover:bg-muted/40" data-testid={`expiring-member-${member.id}`}>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{member.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{member.plan}</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                <div className="flex shrink-0 items-center gap-1 rounded-full bg-orange-500/10 px-2 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
                   {member.endsIn}<ArrowUpRight className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -126,7 +143,7 @@ export default async function DashboardPage() {
               <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-border px-4 text-center">
                 <Info className="h-5 w-5 text-muted-foreground" />
                 <p className="mt-2 text-sm font-medium">No memberships expiring soon</p>
-                <p className="mt-1 text-xs text-muted-foreground">You&apos;re all clear for the next 7 days.</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">You&apos;re all clear for the next 7 days.</p>
               </div>
             )}
           </CardContent>
