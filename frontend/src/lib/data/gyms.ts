@@ -46,18 +46,13 @@ export function serializeGym(gym: IGym): SerializedGym {
     address: gym.address,
     status: gym.status,
     subscriptionStatus: gym.subscriptionStatus,
-    subscriptionStartDate: gym.subscriptionStartDate
-      ? gym.subscriptionStartDate.toISOString()
-      : null,
-    subscriptionEndDate: gym.subscriptionEndDate
-      ? gym.subscriptionEndDate.toISOString()
-      : null,
+    subscriptionStartDate: gym.subscriptionStartDate ? gym.subscriptionStartDate.toISOString() : null,
+    subscriptionEndDate: gym.subscriptionEndDate ? gym.subscriptionEndDate.toISOString() : null,
     createdAt: gym.createdAt.toISOString(),
     updatedAt: gym.updatedAt.toISOString(),
   };
 }
 
-/** Never exposes passwordHash. */
 export function serializeAdmin(user: IUser): SerializedAdmin {
   return {
     id: user._id.toString(),
@@ -86,15 +81,7 @@ export type CreateGymResult =
   | { ok: true; gym: SerializedGym; admin: SerializedAdmin }
   | { ok: false; code: "EMAIL_TAKEN" };
 
-/**
- * Creates a Gym and its initial Gym Admin. Standalone MongoDB has no
- * multi-document transactions, so we guard against partial creation by
- * pre-checking the admin email and compensating (deleting the gym) if the
- * user write fails.
- */
-export async function createGymWithAdmin(
-  input: CreateGymInput,
-): Promise<CreateGymResult> {
+export async function createGymWithAdmin(input: CreateGymInput): Promise<CreateGymResult> {
   await connectToDatabase();
 
   const adminEmail = input.admin.email;
@@ -126,19 +113,16 @@ export async function createGymWithAdmin(
       role: ROLES.GYM_ADMIN,
       gymId: gym._id,
       isActive: true,
+      mustChangePassword: true,
     });
     return { ok: true, gym: serializeGym(gym), admin: serializeAdmin(admin) };
   } catch {
-    // Compensate the partial creation (e.g., duplicate-email race).
     await GymModel.deleteOne({ _id: gym._id });
     return { ok: false, code: "EMAIL_TAKEN" };
   }
 }
 
-export async function updateGym(
-  id: string,
-  patch: UpdateGymInput,
-): Promise<SerializedGym | null> {
+export async function updateGym(id: string, patch: UpdateGymInput): Promise<SerializedGym | null> {
   if (!isValidObjectId(id)) return null;
   await connectToDatabase();
 
@@ -148,59 +132,28 @@ export async function updateGym(
   if (patch.phone !== undefined) update.phone = patch.phone;
   if (patch.address !== undefined) update.address = patch.address;
   if (patch.logo !== undefined) update.logo = patch.logo;
-  if (patch.subscriptionStatus !== undefined)
-    update.subscriptionStatus = patch.subscriptionStatus;
-  if (patch.subscriptionEndDate !== undefined)
-    update.subscriptionEndDate = patch.subscriptionEndDate
-      ? new Date(patch.subscriptionEndDate)
-      : null;
+  if (patch.subscriptionStatus !== undefined) update.subscriptionStatus = patch.subscriptionStatus;
+  if (patch.subscriptionEndDate !== undefined) update.subscriptionEndDate = patch.subscriptionEndDate ? new Date(patch.subscriptionEndDate) : null;
 
-  const gym = await GymModel.findByIdAndUpdate(
-    id,
-    { $set: update },
-    { new: true, runValidators: true },
-  );
+  const gym = await GymModel.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true });
   return gym ? serializeGym(gym) : null;
 }
 
-/**
- * Suspends or activates a gym. Business data is never deleted — only the gym
- * status and subscription state change.
- */
-export async function setGymStatus(
-  id: string,
-  status: GymStatus,
-): Promise<SerializedGym | null> {
+export async function setGymStatus(id: string, status: GymStatus): Promise<SerializedGym | null> {
   if (!isValidObjectId(id)) return null;
   await connectToDatabase();
 
-  const update =
-    status === GYM_STATUS.SUSPENDED
-      ? {
-          status: GYM_STATUS.SUSPENDED,
-          subscriptionStatus: SUBSCRIPTION_STATUS.SUSPENDED,
-        }
-      : {
-          status: GYM_STATUS.ACTIVE,
-          subscriptionStatus: SUBSCRIPTION_STATUS.ACTIVE,
-        };
+  const update = status === GYM_STATUS.SUSPENDED
+    ? { status: GYM_STATUS.SUSPENDED, subscriptionStatus: SUBSCRIPTION_STATUS.SUSPENDED }
+    : { status: GYM_STATUS.ACTIVE, subscriptionStatus: SUBSCRIPTION_STATUS.ACTIVE };
 
-  const gym = await GymModel.findByIdAndUpdate(
-    id,
-    { $set: update },
-    { new: true },
-  );
+  const gym = await GymModel.findByIdAndUpdate(id, { $set: update }, { new: true });
   return gym ? serializeGym(gym) : null;
 }
 
-export async function getGymAdminByGymId(
-  gymId: string,
-): Promise<SerializedAdmin | null> {
+export async function getGymAdminByGymId(gymId: string): Promise<SerializedAdmin | null> {
   if (!isValidObjectId(gymId)) return null;
   await connectToDatabase();
-  const admin = await UserModel.findOne({
-    gymId,
-    role: ROLES.GYM_ADMIN,
-  }).lean<IUser>();
+  const admin = await UserModel.findOne({ gymId, role: ROLES.GYM_ADMIN }).lean<IUser>();
   return admin ? serializeAdmin(admin) : null;
 }
