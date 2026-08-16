@@ -1,4 +1,5 @@
 import { Dumbbell } from "lucide-react";
+import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export function Brand({
@@ -16,7 +17,7 @@ export function Brand({
         <Dumbbell className="h-5 w-5" strokeWidth={2.5} />
       </div>
       <div className="min-w-0 leading-none">
-        <span className="font-heading text-[19px] font-black tracking-[-0.04em] text-white">GymOS</span>
+        <span className="font-heading text-[19px] font-black tracking-[-0.04em] text-white">{APP_NAME}</span>
         {subtitle ? (
           <p className={cn("mt-1.5 truncate text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-400", subtitleClassName)}>
             {subtitle}
