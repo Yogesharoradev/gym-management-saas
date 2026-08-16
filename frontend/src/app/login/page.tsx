@@ -1,12 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import {
-  ShieldCheck,
-  TrendingUp,
-  Users,
-  Dumbbell,
-  ArrowRight,
-} from "lucide-react";
+import { ShieldCheck, TrendingUp, Users, Dumbbell, ArrowRight, Sparkles } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { getSessionPayload } from "@/lib/auth/session";
 import { ROLES } from "@/lib/constants";
@@ -18,214 +12,112 @@ const LOGIN_BG =
   "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwzfHxneW0lMjBkYXJrJTIwbW9kZXJufGVufDB8fHx8MTc0MDAwMDAwMHww&ixlib=rb-4.1.0&q=85";
 
 const stats = [
-  {
-    icon: Users,
-    label: "Active Members",
-    value: "12,000+",
-    color: "from-emerald-500/20 to-emerald-500/5",
-  },
-  {
-    icon: TrendingUp,
-    label: "Revenue Tracked",
-    value: "₹8.5Cr+",
-    color: "from-amber-500/20 to-amber-500/5",
-  },
-  {
-    icon: Dumbbell,
-    label: "Gyms Powered",
-    value: "350+",
-    color: "from-rose-500/20 to-rose-500/5",
-  },
+  { icon: Users, label: "Active Members", value: "12,000+", color: "from-emerald-500/20 to-emerald-500/5" },
+  { icon: TrendingUp, label: "Revenue Tracked", value: "₹8.5Cr+", color: "from-amber-500/20 to-amber-500/5" },
+  { icon: Dumbbell, label: "Gyms Powered", value: "350+", color: "from-rose-500/20 to-rose-500/5" },
 ];
 
 export default async function LoginPage() {
   const payload = await getSessionPayload();
   if (payload) {
-    redirect(
-      payload.role === ROLES.SUPER_ADMIN ? "/super-admin" : "/dashboard",
-    );
+    redirect(payload.role === ROLES.SUPER_ADMIN ? "/super-admin" : "/dashboard");
   }
 
   return (
-    <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* ─── Visual Panel ─── */}
-      <div className="relative hidden overflow-hidden bg-neutral-950 lg:block">
-        {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${LOGIN_BG})` }}
-          aria-hidden
-        />
+    <main className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.08),transparent_30%),radial-gradient(circle_at_90%_80%,rgba(6,182,212,0.07),transparent_28%)]" />
 
-        {/* Multi-layer overlay for depth */}
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
+      <div className="relative mx-auto grid min-h-screen w-full max-w-[1600px] lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden overflow-hidden lg:flex">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${LOGIN_BG})` }} aria-hidden />
+          <div className="absolute inset-0 bg-black/65" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-black/30 to-emerald-950/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
 
-        {/* Subtle animated grain overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
+          <div className="relative flex w-full flex-col justify-between p-10 xl:p-14">
+            <div>
+              <Brand subtitle="Platform" className="[&_span]:text-white" />
 
-        {/* Content */}
-        <div className="relative flex h-full flex-col justify-between p-12">
-          {/* Top: Brand */}
-          <div className="animate-fade-in-down">
-            <Brand subtitle="Platform" className="[&_span]:text-white" />
-          </div>
+              <div className="mt-20 max-w-xl xl:mt-28">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-medium text-white/65 backdrop-blur-md">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  Built for modern gyms
+                </div>
 
-          {/* Middle: Hero text */}
-          <div className="max-w-lg animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/70 backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              Trusted by 350+ gyms across India
-            </div>
+                <h1 className="mt-7 font-heading text-5xl font-black leading-[1.05] tracking-[-0.04em] text-white xl:text-6xl">
+                  Run your gym
+                  <span className="block bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">like a pro.</span>
+                </h1>
 
-            <h2 className="mt-6 font-heading text-5xl font-black leading-[1.1] tracking-tight text-white">
-              Run your gym
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400">
-                like a pro.
-              </span>
-            </h2>
-
-            <p className="mt-5 text-base leading-relaxed text-white/60 max-w-md">
-              Members, memberships, attendance, payments and renewals — one
-              clean, blazing-fast console built exclusively for Indian gyms.
-            </p>
-
-            <div className="mt-8 flex items-center gap-3 text-sm text-white/50">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
-                <ArrowRight className="h-4 w-4" />
-              </span>
-              <span>Start your 14-day free trial today</span>
-            </div>
-          </div>
-
-          {/* Bottom: Floating stats cards */}
-          <div
-            className="grid grid-cols-3 gap-4 animate-fade-in-up"
-            style={{ animationDelay: "0.3s" }}
-          >
-            {stats.map((stat, i) => (
-              <div
-                key={stat.label}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-500 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"
-                style={{ animationDelay: `${0.4 + i * 0.1}s` }}
-              >
-                <div
-                  className={`absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br ${stat.color} blur-2xl transition-all duration-500 group-hover:scale-150`}
-                />
-                <stat.icon className="relative h-5 w-5 text-white/70" />
-                <p className="relative mt-3 text-2xl font-bold text-white tracking-tight">
-                  {stat.value}
+                <p className="mt-6 max-w-lg text-base leading-7 text-white/50 xl:text-lg">
+                  Members, memberships, attendance, payments and renewals — one clean console built to keep your gym moving.
                 </p>
-                <p className="relative mt-1 text-xs font-medium text-white/40">
-                  {stat.label}
-                </p>
+
+                <div className="mt-8 flex items-center gap-3 text-sm text-white/50">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.06]">
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                  </span>
+                  <span>Everything you need. Nothing you don&apos;t.</span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div className="grid max-w-3xl grid-cols-3 gap-3 xl:gap-4">
+              {stats.map((stat, index) => (
+                <div key={stat.label} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.08] xl:p-5">
+                  <div className={`absolute -right-5 -top-5 h-20 w-20 rounded-full bg-gradient-to-br ${stat.color} blur-2xl transition-transform duration-500 group-hover:scale-150`} />
+                  <stat.icon className="relative h-4 w-4 text-white/55" />
+                  <p className="relative mt-3 text-xl font-bold tracking-tight text-white xl:text-2xl">{stat.value}</p>
+                  <p className="relative mt-1 text-[11px] font-medium text-white/35 xl:text-xs">{stat.label}</p>
+                  <span className="absolute right-4 top-4 text-[10px] text-white/20">0{index + 1}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* ─── Form Panel ─── */}
-      <div className="relative flex items-center justify-center bg-neutral-50 px-6 py-12 dark:bg-neutral-950">
-        {/* Subtle background pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.015]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-            backgroundSize: "32px 32px",
-          }}
-        />
+        <section className="relative flex min-h-screen items-center justify-center border-l border-white/5 bg-neutral-950/90 px-5 py-8 sm:px-8 lg:px-12">
+          <div className="absolute inset-0 opacity-[0.025] [background-image:radial-gradient(circle_at_1px_1px,currentColor_1px,transparent_0)] [background-size:32px_32px]" />
 
-        <div className="relative w-full max-w-md">
-          {/* Mobile brand */}
-          <div className="mb-10 lg:hidden">
-            <Brand subtitle="Platform" />
-          </div>
+          <div className="relative w-full max-w-md">
+            <div className="mb-10 lg:hidden">
+              <Brand subtitle="Platform" />
+            </div>
 
-          {/* Header */}
-          <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
-              Welcome back
+            <div className="mb-7">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-400/10 bg-emerald-400/[0.06] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400/80">
+                <ShieldCheck className="h-3.5 w-3.5" /> Secure access
+              </div>
+              <h2 className="font-heading text-4xl font-black tracking-[-0.03em] text-white">Welcome back</h2>
+              <p className="mt-3 text-sm leading-6 text-white/40">Sign in to access your GymOS management console.</p>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-1 shadow-2xl shadow-black/40 backdrop-blur-xl">
+              <div className="rounded-[1.25rem] border border-white/[0.04] bg-neutral-900/60 p-6 sm:p-8">
+                <Suspense fallback={null}>
+                  <LoginForm />
+                </Suspense>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-white/25">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Secure session · Protected access
+            </div>
+
+            <p className="mt-5 text-center text-[11px] leading-5 text-white/20">
+              By signing in, you agree to our <a href="#" className="text-white/40 transition-colors hover:text-white/70">Terms</a> and <a href="#" className="text-white/40 transition-colors hover:text-white/70">Privacy Policy</a>.
             </p>
-            <h1 className="mt-3 font-heading text-4xl font-black tracking-tight text-foreground">
-              Sign in to <span className="text-primary">GymOS</span>
-            </h1>
-            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              Enter your credentials to access your gym management console.
-            </p>
           </div>
 
-          {/* Form */}
-          <div className="rounded-2xl border border-border/50 bg-card p-1 shadow-xl shadow-black/5">
-            <div className="rounded-xl bg-card p-6 sm:p-8">
-              <Suspense fallback={null}>
-                <LoginForm />
-              </Suspense>
-            </div>
+          <div className="absolute bottom-5 left-5 flex items-center gap-2 text-[10px] text-white/15 sm:left-8 lg:left-12">
+            <ArrowRight className="h-3 w-3" /> GymOS Platform
           </div>
-
-          {/* Demo credentials */}
-          <div className="mt-6 overflow-hidden rounded-2xl border border-dashed border-border/60 bg-muted/30">
-            <div className="flex items-center gap-3 border-b border-dashed border-border/60 bg-muted/50 px-5 py-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <span className="text-xs font-semibold text-foreground">
-                Demo Accounts
-              </span>
-            </div>
-            <div className="space-y-2.5 p-5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Gym Admin</span>
-                <code className="rounded-md bg-muted px-2 py-1 font-mono text-foreground">
-                  admin@ironpulse.in
-                </code>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Password</span>
-                <code className="rounded-md bg-muted px-2 py-1 font-mono text-foreground">
-                  GymAdmin@123
-                </code>
-              </div>
-              <div className="my-2 border-t border-dashed border-border/40" />
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Super Admin</span>
-                <code className="rounded-md bg-muted px-2 py-1 font-mono text-foreground">
-                  owner@gymos.app
-                </code>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Password</span>
-                <code className="rounded-md bg-muted px-2 py-1 font-mono text-foreground">
-                  SuperAdmin@123
-                </code>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-muted-foreground/60">
-            By signing in, you agree to our{" "}
-            <a href="#" className="text-primary hover:underline">
-              Terms
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-primary hover:underline">
-              Privacy Policy
-            </a>
-            .
-          </p>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
