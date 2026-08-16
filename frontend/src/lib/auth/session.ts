@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/jwt";
 import {
   GYM_STATUS,
+  SUBSCRIPTION_GRACE_PERIOD_DAYS,
   SUBSCRIPTION_STATUS,
   ROLES,
   type Role,
@@ -21,6 +22,14 @@ import type { GymSummary, SessionUser } from "@/types";
 export interface AuthState {
   user: SessionUser;
   gym: GymSummary | null;
+}
+
+export interface GymAccessInfo {
+  accessible: boolean;
+  inGracePeriod: boolean;
+  gracePeriodEndsAt: string | null;
+  graceDaysRemaining: number;
+  reason: "ACTIVE" | "GRACE_PERIOD" | "MANUALLY_SUSPENDED" | "SUBSCRIPTION_INACTIVE" | "NO_GYM";
 }
 
 function toGymSummary(gym: IGym): GymSummary {
@@ -38,13 +47,97 @@ function toGymSummary(gym: IGym): GymSummary {
   };
 }
 
-export function isGymAccessible(gym: GymSummary | null): boolean {
-  if (!gym) return false;
-  if (gym.status === GYM_STATUS.SUSPENDED) return false;
-  return (
-    gym.subscriptionStatus === SUBSCRIPTION_STATUS.ACTIVE ||
-    gym.subscriptionStatus === SUBSCRIPTION_STATUS.PAST_DUE
+/**
+ * Resolves gym access from the current gym record rather than trusting the
+ * session token. Manual suspension always wins. Subscription expiry gets a
+ * seven-day grace period so a customer is not locked out immediately.
+ */
+export function getGymAccessInfo(gym: GymSummary | null): GymAccessInfo {
+  if (!gym) {
+    return {
+      accessible: false,
+      inGracePeriod: false,
+      gracePeriodEndsAt: null,
+      graceDaysRemaining: 0,
+      reason: "NO_GYM",
+    };
+  }
+
+  if (gym.status === GYM_STATUS.SUSPENDED) {
+    return {
+      accessible: false,
+      inGracePeriod: false,
+      gracePeriodEndsAt: null,
+      graceDaysRemaining: 0,
+      reason: "MANUALLY_SUSPENDED",
+    };
+  }
+
+  if (
+    gym.subscriptionStatus !== SUBSCRIPTION_STATUS.ACTIVE &&
+    gym.subscriptionStatus !== SUBSCRIPTION_STATUS.PAST_DUE
+  ) {
+    return {
+      accessible: false,
+      inGracePeriod: false,
+      gracePeriodEndsAt: null,
+      graceDaysRemaining: 0,
+      reason: "SUBSCRIPTION_INACTIVE",
+    };
+  }
+
+  if (!gym.subscriptionEndDate) {
+    return {
+      accessible: true,
+      inGracePeriod: false,
+      gracePeriodEndsAt: null,
+      graceDaysRemaining: 0,
+      reason: "ACTIVE",
+    };
+  }
+
+  const endDate = new Date(gym.subscriptionEndDate);
+  const gracePeriodEndsAt = new Date(
+    endDate.getTime() + SUBSCRIPTION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
   );
+  const now = Date.now();
+
+  if (now < endDate.getTime()) {
+    return {
+      accessible: true,
+      inGracePeriod: false,
+      gracePeriodEndsAt: gracePeriodEndsAt.toISOString(),
+      graceDaysRemaining: SUBSCRIPTION_GRACE_PERIOD_DAYS,
+      reason: "ACTIVE",
+    };
+  }
+
+  if (now < gracePeriodEndsAt.getTime()) {
+    const graceDaysRemaining = Math.max(
+      1,
+      Math.ceil((gracePeriodEndsAt.getTime() - now) / (24 * 60 * 60 * 1000)),
+    );
+
+    return {
+      accessible: true,
+      inGracePeriod: true,
+      gracePeriodEndsAt: gracePeriodEndsAt.toISOString(),
+      graceDaysRemaining,
+      reason: "GRACE_PERIOD",
+    };
+  }
+
+  return {
+    accessible: false,
+    inGracePeriod: false,
+    gracePeriodEndsAt: gracePeriodEndsAt.toISOString(),
+    graceDaysRemaining: 0,
+    reason: "SUBSCRIPTION_INACTIVE",
+  };
+}
+
+export function isGymAccessible(gym: GymSummary | null): boolean {
+  return getGymAccessInfo(gym).accessible;
 }
 
 export async function setSessionCookie(payload: TokenPayload): Promise<void> {
