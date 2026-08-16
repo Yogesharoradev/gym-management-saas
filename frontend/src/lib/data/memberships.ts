@@ -6,7 +6,7 @@ import { MembershipPlanModel, type IMembershipPlan } from "@/models/membership-p
 import { MemberModel } from "@/models/member.model";
 import { tenant } from "@/lib/data/tenant";
 import { MEMBER_STATUS, MEMBERSHIP_STATUS, type MembershipStatus } from "@/lib/constants";
-import type { MembershipInput, MembershipPlanInput, UpdateMembershipPlanInput } from "@/lib/validation/membership";
+import type { MembershipInput, MembershipPlanInput, UpdateMembershipInput, UpdateMembershipPlanInput } from "@/lib/validation/membership";
 
 export interface SerializedMembershipPlan {
   id: string;
@@ -132,6 +132,52 @@ export async function createMembership(gymId: string, input: MembershipInput): P
   const membership = await MembershipModel.create({ gymId: tenant(gymId).gymId, memberId: member._id, planId: plan._id, startDate, endDate, amount: input.amount, weightAtStart: input.weightAtStart, status: MEMBERSHIP_STATUS.ACTIVE });
   if (member.status !== MEMBER_STATUS.ACTIVE) await MemberModel.updateOne(tenant(gymId).filter({ _id: member._id }), { $set: { status: MEMBER_STATUS.ACTIVE } });
   return serializeMembership(membership, member, plan);
+}
+
+export async function updateMembership(gymId: string, membershipId: string, input: UpdateMembershipInput): Promise<SerializedMembership | null> {
+  if (!isValidObjectId(membershipId)) return null;
+  await connectToDatabase();
+
+  const existing = await MembershipModel.findOne(tenant(gymId).filter({ _id: membershipId })).lean<IMembership>();
+  if (!existing) return null;
+
+  const nextPlanId = input.planId ?? existing.planId.toString();
+  if (!isValidObjectId(nextPlanId)) throw new Error("Invalid membership plan");
+
+  const [plan, member] = await Promise.all([
+    MembershipPlanModel.findOne(tenant(gymId).filter({ _id: nextPlanId })).lean<IMembershipPlan>(),
+    MemberModel.findOne(tenant(gymId).filter({ _id: existing.memberId })).lean(),
+  ]);
+  if (!member) throw new Error("Member not found");
+  if (!plan) throw new Error("Membership plan not found");
+  if (input.planId && !plan.isActive && plan._id.toString() !== existing.planId.toString()) throw new Error("Membership plan is unavailable");
+
+  const startDate = input.startDate ? new Date(input.startDate) : existing.startDate;
+  const endDate = input.endDate ? new Date(input.endDate) : existing.endDate;
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) throw new Error("Invalid membership dates");
+  if (endDate < startDate) throw new Error("End date must be on or after start date");
+
+  if (existing.status === MEMBERSHIP_STATUS.ACTIVE) {
+    const overlap = await MembershipModel.findOne(tenant(gymId).filter({
+      _id: { $ne: membershipId }, memberId: existing.memberId, status: MEMBERSHIP_STATUS.ACTIVE,
+      startDate: { $lte: endDate }, endDate: { $gte: startDate },
+    })).lean();
+    if (overlap) throw new Error("This member already has another overlapping active membership");
+  }
+
+  const update: Record<string, unknown> = {};
+  if (input.planId) update.planId = plan._id;
+  if (input.startDate) update.startDate = startDate;
+  if (input.endDate) update.endDate = endDate;
+  if (input.amount !== undefined) update.amount = input.amount;
+  if (input.weightAtStart !== undefined) update.weightAtStart = input.weightAtStart;
+  if (input.status) update.status = input.status;
+
+  const membership = await MembershipModel.findOneAndUpdate(tenant(gymId).filter({ _id: membershipId }), { $set: update }, { new: true, runValidators: true }).lean<IMembership>();
+  if (!membership) return null;
+
+  const hydratedPlan = input.planId ? plan : await MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean<IMembershipPlan>();
+  return hydratedPlan ? serializeMembership(membership, member, hydratedPlan) : null;
 }
 
 export async function setMembershipStatus(gymId: string, membershipId: string, status: MembershipStatus): Promise<SerializedMembership | null> {
