@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import type { GymSummary } from "@/types";
+import { GYM_STATUS } from "@/lib/constants";
 
 export function GymSuspended({ gym }: { gym: GymSummary }) {
   const router = useRouter();
+  const manuallySuspended = gym.status === GYM_STATUS.SUSPENDED;
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -23,17 +25,32 @@ export function GymSuspended({ gym }: { gym: GymSummary }) {
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-sm border border-destructive/30 bg-destructive/10 text-destructive">
           <Lock className="h-6 w-6" />
         </div>
+
         <h1 className="font-heading text-2xl font-black tracking-tighter">
-          Access paused
+          {manuallySuspended ? "Gym access suspended" : "Subscription expired"}
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Access to <span className="font-semibold text-foreground">{gym.name}</span>{" "}
-          is currently unavailable because the subscription is not active. Your gym
-          data is safe and will be restored once the subscription is reactivated.
+
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {manuallySuspended ? (
+            <>
+              Access to <span className="font-semibold text-foreground">{gym.name}</span>{" "}
+              has been suspended by the platform administrator. Please contact the
+              administrator to restore access.
+            </>
+          ) : (
+            <>
+              The subscription for{" "}
+              <span className="font-semibold text-foreground">{gym.name}</span>{" "}
+              has expired and the seven-day grace period has ended. Please contact the
+              administrator to renew the subscription and restore access.
+            </>
+          )}
         </p>
+
         <div className="mt-4 flex justify-center">
           <StatusBadge status={gym.subscriptionStatus} />
         </div>
+
         <Button
           variant="outline"
           className="mt-6 w-full"
