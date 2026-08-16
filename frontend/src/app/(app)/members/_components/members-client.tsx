@@ -35,6 +35,7 @@ export function MembersClient() {
   const [total, setTotal] = React.useState(0);
   const [stats, setStats] = React.useState<MemberListStats>({ total: 0, active: 0, frozen: 0, inactive: 0, withMembership: 0 });
   const [query, setQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [status, setStatus] = React.useState<Filter>("ALL");
   const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
@@ -43,12 +44,20 @@ export function MembersClient() {
   const [menuPosition, setMenuPosition] = React.useState<MenuPosition | null>(null);
   const [updatingId, setUpdatingId] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: "12" });
-      if (query.trim()) params.set("q", query.trim());
+      if (debouncedQuery) params.set("q", debouncedQuery);
       if (status !== "ALL") params.set("status", status);
       const response = await fetch(`/api/members?${params.toString()}`, { cache: "no-store" });
       const data = (await response.json()) as MembersResponse;
@@ -61,7 +70,7 @@ export function MembersClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, query, status]);
+  }, [page, debouncedQuery, status]);
 
   React.useEffect(() => { void load(); }, [load]);
   React.useEffect(() => {
