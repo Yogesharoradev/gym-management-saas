@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${chivo.variable} ${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          forcedTheme="light"
           disableTransitionOnChange
         >
           <GlobalRouteLoader />
