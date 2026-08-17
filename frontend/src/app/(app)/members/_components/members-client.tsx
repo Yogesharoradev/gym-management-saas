@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import useSWR from "swr";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
@@ -59,20 +60,10 @@ function formatDate(value: string, withYear = false): string {
 }
 
 export function MembersClient({ actions }: { actions?: React.ReactNode }) {
-  const [members, setMembers] = React.useState<SerializedMember[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [stats, setStats] = React.useState<MemberListStats>({
-    total: 0,
-    active: 0,
-    frozen: 0,
-    inactive: 0,
-    withMembership: 0,
-  });
   const [query, setQuery] = React.useState("");
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [status, setStatus] = React.useState<Filter>("ALL");
   const [page, setPage] = React.useState(1);
-  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [menuId, setMenuId] = React.useState<string | null>(null);
   const [menuPosition, setMenuPosition] = React.useState<MenuPosition | null>(
@@ -88,34 +79,47 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: "12",
-      });
-      if (debouncedQuery) params.set("q", debouncedQuery);
-      if (status !== "ALL") params.set("status", status);
-      const response = await fetch(`/api/members?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const data = (await response.json()) as MembersResponse;
-      if (!response.ok) throw new Error(data.error ?? "Unable to load members");
-      setMembers(data.members);
-      setTotal(data.total);
-      setStats(data.stats);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load members");
-    } finally {
-      setLoading(false);
-    }
+  const membersKey = React.useMemo(() => {
+    const params = new URLSearchParams({ page: String(page), pageSize: "12" });
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    if (status !== "ALL") params.set("status", status);
+    return `/api/members?${params.toString()}`;
   }, [page, debouncedQuery, status]);
 
+  const fetchMembers = React.useCallback(
+    async (url: string): Promise<MembersResponse> => {
+      const response = await fetch(url);
+      const data = (await response.json()) as MembersResponse;
+      if (!response.ok) throw new Error(data.error ?? "Unable to load members");
+      return data;
+    },
+    [],
+  );
+
+  const {
+    data: membersData,
+    error: membersError,
+    isLoading,
+    isValidating,
+    mutate,
+  } = useSWR<MembersResponse>(membersKey, fetchMembers, {
+    keepPreviousData: true,
+  });
+
+  const members = membersData?.members ?? [];
+  const total = membersData?.total ?? 0;
+  const stats = membersData?.stats ?? {
+    total: 0,
+    active: 0,
+    frozen: 0,
+    inactive: 0,
+    withMembership: 0,
+  };
+  const loading = isLoading;
+
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    setError(membersError instanceof Error ? membersError.message : null);
+  }, [membersError]);
   React.useEffect(() => {
     if (!menuId) return;
     const close = () => {
@@ -166,7 +170,7 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
         body: JSON.stringify({ status: nextStatus }),
       });
       if (!response.ok) throw new Error("Unable to update member status");
-      await load();
+      await mutate();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to update member status",

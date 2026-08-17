@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -188,21 +189,9 @@ function DialogHeader({
 
 export function MembershipsClient() {
   const [tab, setTab] = React.useState<"memberships" | "plans">("memberships");
-  const [memberships, setMemberships] = React.useState<Membership[]>([]);
-  const [plans, setPlans] = React.useState<Plan[]>([]);
-  const [members, setMembers] = React.useState<MemberOption[]>([]);
-  const [stats, setStats] = React.useState<MembershipResponse["stats"]>({
-    total: 0,
-    active: 0,
-    expiring: 0,
-    expired: 0,
-    cancelled: 0,
-  });
   const [query, setQuery] = React.useState("");
   const [status, setStatus] = React.useState<"ALL" | MembershipStatus>("ALL");
   const [page, setPage] = React.useState(1);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [planOpen, setPlanOpen] = React.useState(false);
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -210,6 +199,7 @@ export function MembershipsClient() {
   const [editingMembership, setEditingMembership] =
     React.useState<Membership | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [planForm, setPlanForm] = React.useState({
     name: "",
     duration: "1",
@@ -234,77 +224,90 @@ export function MembershipsClient() {
   });
   const [memberQuery, setMemberQuery] = React.useState("");
 
-  const loadPlans = React.useCallback(async () => {
-    const response = await fetch("/api/membership-plans", {
-      cache: "no-store",
-    });
-    const data = (await response.json()) as { plans?: Plan[]; error?: string };
-    if (!response.ok) throw new Error(data.error ?? "Unable to load plans");
-    setPlans(data.plans ?? []);
-  }, []);
-  const loadMemberships = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: "12",
-      });
-      if (query.trim()) params.set("q", query.trim());
-      if (status !== "ALL") params.set("status", status);
-      const response = await fetch(`/api/memberships?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const data = (await response.json()) as MembershipResponse & {
-        error?: string;
-      };
-      if (!response.ok)
-        throw new Error(data.error ?? "Unable to load memberships");
-      setMemberships(data.memberships);
-      setStats(data.stats);
-      setPage(data.page);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to load memberships",
-      );
-    } finally {
-      setLoading(false);
+  const fetcher = React.useCallback(async <T,>(url: string): Promise<T> => {
+    const response = await fetch(url);
+    const data = (await response.json()) as T & { error?: string };
+
+    if (!response.ok) {
+      throw new Error(data.error ?? "Unable to load data");
     }
-  }, [page, query, status]);
-  const loadMembers = React.useCallback(async () => {
-    const params = new URLSearchParams({ page: "1", pageSize: "50" });
-    if (memberQuery.trim()) params.set("q", memberQuery.trim());
-    const response = await fetch(`/api/members?${params.toString()}`, {
-      cache: "no-store",
+
+    return data;
+  }, []);
+
+  const membershipKey = React.useMemo(() => {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: "12",
     });
-    const data = (await response.json()) as {
-      members?: Array<{ id: string; name: string; phone: string }>;
-      error?: string;
-    };
-    if (!response.ok) throw new Error(data.error ?? "Unable to load members");
-    setMembers(
-      (data.members ?? []).map((member) => ({
-        id: member.id,
-        name: member.name,
-        phone: member.phone,
-      })),
-    );
-  }, [memberQuery]);
+
+    if (query.trim()) params.set("q", query.trim());
+    if (status !== "ALL") params.set("status", status);
+
+    return `/api/memberships?${params.toString()}`;
+  }, [page, query, status]);
+
+  const {
+    data: membershipData,
+    error: membershipError,
+    isLoading: membershipsLoading,
+    mutate: mutateMemberships,
+  } = useSWR<MembershipResponse>(membershipKey, fetcher, {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+  });
+
+  const {
+    data: plansData,
+    error: plansError,
+    isLoading: plansLoading,
+    mutate: mutatePlans,
+  } = useSWR<{ plans: Plan[] }>("/api/membership-plans", fetcher, {
+    revalidateOnFocus: false,
+  });
+
+  const memberKey = React.useMemo(() => {
+    if (!assignOpen) return null;
+
+    const params = new URLSearchParams({
+      page: "1",
+      pageSize: "50",
+    });
+
+    if (memberQuery.trim()) params.set("q", memberQuery.trim());
+
+    return `/api/members?${params.toString()}`;
+  }, [assignOpen, memberQuery]);
+
+  const { data: membersData, error: membersError } = useSWR<{
+    members: MemberOption[];
+  }>(memberKey, fetcher, {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+  });
+
+  const memberships = membershipData?.memberships ?? [];
+  const plans = plansData?.plans ?? [];
+  const members = membersData?.members ?? [];
+  const stats = membershipData?.stats ?? {
+    total: 0,
+    active: 0,
+    expiring: 0,
+    expired: 0,
+    cancelled: 0,
+  };
+
+  const loading = membershipsLoading || (tab === "plans" && plansLoading);
 
   React.useEffect(() => {
-    void loadMemberships();
-  }, [loadMemberships]);
-  React.useEffect(() => {
-    void loadPlans().catch((err: unknown) =>
-      setError(err instanceof Error ? err.message : "Unable to load plans"),
-    );
-  }, [loadPlans]);
-  React.useEffect(() => {
-    if (assignOpen)
-      void loadMembers().catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Unable to load members"),
+    const swrError = membershipError ?? plansError ?? membersError;
+
+    if (swrError) {
+      setError(
+        swrError instanceof Error ? swrError.message : "Unable to load data",
       );
-  }, [assignOpen, loadMembers]);
+    }
+  }, [membershipError, plansError, membersError]);
 
   function openPlan(plan?: Plan): void {
     setEditingPlan(plan ?? null);
@@ -412,7 +415,7 @@ export function MembershipsClient() {
       );
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Unable to save plan");
-      await loadPlans();
+      await mutatePlans();
       setPlanOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save plan");
@@ -439,7 +442,7 @@ export function MembershipsClient() {
       const data = (await response.json()) as { error?: string };
       if (!response.ok)
         throw new Error(data.error ?? "Unable to assign membership");
-      await loadMemberships();
+      await mutateMemberships();
       setAssignOpen(false);
     } catch (err) {
       setError(
@@ -472,7 +475,7 @@ export function MembershipsClient() {
       const data = (await response.json()) as { error?: string };
       if (!response.ok)
         throw new Error(data.error ?? "Unable to update membership");
-      await loadMemberships();
+      await mutateMemberships();
       setEditOpen(false);
       setEditingMembership(null);
     } catch (err) {
@@ -489,7 +492,7 @@ export function MembershipsClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !plan.isActive }),
     });
-    if (response.ok) await loadPlans();
+    if (response.ok) await mutatePlans();
   }
 
   const pages = Math.max(1, Math.ceil(stats.total / 12));

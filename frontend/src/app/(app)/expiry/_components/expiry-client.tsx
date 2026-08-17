@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import useSWR from "swr";
 import {
   AlertCircle,
   CalendarDays,
@@ -79,20 +80,9 @@ function bucketLabel(bucket: ExpiryBucket): string {
 
 export function ExpiryClient() {
   const [bucket, setBucket] = React.useState<ExpiryBucket>("SEVEN_DAYS");
-  const [memberships, setMemberships] = React.useState<ExpiryMembership[]>([]);
-  const [summary, setSummary] = React.useState<ExpirySummary>({
-    expired: 0,
-    today: 0,
-    threeDays: 0,
-    sevenDays: 0,
-    thirtyDays: 0,
-  });
   const [query, setQuery] = React.useState("");
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [renewing, setRenewing] = React.useState<ExpiryMembership | null>(null);
-  const [plans, setPlans] = React.useState<Plan[]>([]);
   const [form, setForm] = React.useState({
     planId: "",
     startDate: todayInput(),
@@ -107,43 +97,45 @@ export function ExpiryClient() {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ bucket });
-      if (debouncedQuery) params.set("q", debouncedQuery);
-      const response = await fetch(
-        `/api/memberships/expiry?${params.toString()}`,
-        { cache: "no-store" },
-      );
-      const data = (await response.json()) as ExpiryResponse;
-      if (!response.ok)
-        throw new Error(data.error ?? "Unable to load expiry data");
-      setMemberships(data.memberships);
-      setSummary(data.summary);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to load expiry data",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const expiryKey = React.useMemo(() => {
+    const params = new URLSearchParams({ bucket });
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    return `/api/memberships/expiry?${params.toString()}`;
   }, [bucket, debouncedQuery]);
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: expiryData,
+    error: expiryError,
+    isLoading: expiryLoading,
+    isValidating: expiryValidating,
+    mutate: mutateExpiry,
+  } = useSWR<ExpiryResponse>(expiryKey, {
+    keepPreviousData: true,
+  });
 
-  async function loadPlans(): Promise<void> {
-    const response = await fetch("/api/membership-plans", {
-      cache: "no-store",
-    });
-    const data = (await response.json()) as { plans?: Plan[]; error?: string };
-    if (!response.ok)
-      throw new Error(data.error ?? "Unable to load membership plans");
-    setPlans(data.plans ?? []);
-  }
+  const { data: plansData, error: plansError } = useSWR<{
+    plans?: Plan[];
+    error?: string;
+  }>("/api/membership-plans", {
+    revalidateOnMount: false,
+  });
+
+  const memberships = expiryData?.memberships ?? [];
+  const summary = expiryData?.summary ?? {
+    expired: 0,
+    today: 0,
+    threeDays: 0,
+    sevenDays: 0,
+    thirtyDays: 0,
+  };
+  const plans = plansData?.plans ?? [];
+  const loading = expiryLoading && !expiryData;
+  const error =
+    expiryError instanceof Error
+      ? expiryError.message
+      : plansError instanceof Error
+        ? plansError.message
+        : (expiryData?.error ?? plansData?.error ?? null);
 
   function openRenew(membership: ExpiryMembership): void {
     const start =
@@ -163,17 +155,6 @@ export function ExpiryClient() {
       weightAtStart: "",
     });
   }
-
-  React.useEffect(() => {
-    if (renewing)
-      void loadPlans().catch((err: unknown) =>
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load membership plans",
-        ),
-      );
-  }, [renewing]);
 
   function changePlan(planId: string): void {
     const plan = plans.find((item) => item.id === planId);
@@ -201,7 +182,7 @@ export function ExpiryClient() {
     event.preventDefault();
     if (!renewing) return;
     setSaving(true);
-    setError(null);
+
     try {
       const response = await fetch("/api/memberships", {
         method: "POST",
@@ -219,11 +200,9 @@ export function ExpiryClient() {
       if (!response.ok)
         throw new Error(data.error ?? "Unable to renew membership");
       setRenewing(null);
-      await load();
+      await mutateExpiry();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to renew membership",
-      );
+      console.log(err, "errror");
     } finally {
       setSaving(false);
     }
