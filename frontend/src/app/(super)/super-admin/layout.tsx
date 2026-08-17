@@ -1,5 +1,5 @@
 import { requireSuperAdmin } from "@/lib/auth/guards";
-import { AppShell } from "@/components/shell/app-shell";
+import { SuperAdminShell } from "@/components/shell/super-admin-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +10,5 @@ export default async function SuperAdminLayout({
 }) {
   const { user } = await requireSuperAdmin();
 
-  return (
-    <AppShell variant="super" user={user} gym={null}>
-      {children}
-    </AppShell>
-  );
+  return <SuperAdminShell user={user}>{children}</SuperAdminShell>;
 }
