@@ -18,13 +18,44 @@ export async function listMembershipExpiry(gymId: string, bucket?: ExpiryBucket,
   const today = startOfDate(new Date());
   const filters = tenant(gymId);
   const memberFilter: Record<string, unknown> = {};
-  if (query?.trim()) { const ids = await MemberModel.find(filters.filter({ $or: [{ name: { $regex: query.trim(), $options: "i" } }, { phone: { $regex: query.trim(), $options: "i" } }] })).distinct("_id"); memberFilter.memberId = { $in: ids }; }
-  const memberships = await MembershipModel.find(filters.filter({ status: { $ne: MEMBERSHIP_STATUS.CANCELLED }, ...memberFilter })).sort({ endDate: -1 }).lean<IMembership[]>();
+
+  if (query?.trim()) {
+    const ids = await MemberModel.find(filters.filter({ $or: [{ name: { $regex: query.trim(), $options: "i" } }, { phone: { $regex: query.trim(), $options: "i" } }] })).distinct("_id");
+    memberFilter.memberId = { $in: ids };
+  }
+
+  const memberships = await MembershipModel.find(filters.filter({ status: { $ne: MEMBERSHIP_STATUS.CANCELLED }, ...memberFilter })).sort({ memberId: 1, endDate: -1, startDate: -1, createdAt: -1 }).lean<IMembership[]>();
   const latestByMember = new Map<string, IMembership>();
-  for (const membership of memberships) { const key = membership.memberId.toString(); if (!latestByMember.has(key)) latestByMember.set(key, membership); }
-  const hydrated = await Promise.all(Array.from(latestByMember.values()).map(async (membership) => { const [member, plan] = await Promise.all([MemberModel.findOne(filters.filter({ _id: membership.memberId })).lean(), MembershipPlanModel.findOne(filters.filter({ _id: membership.planId })).lean<IMembershipPlan>()]); return member && plan ? serialize(membership, member, plan, today) : null; }));
-  const inWindow = hydrated.filter((item): item is ExpiryMembership => item !== null && item.daysLeft <= 30);
+  for (const membership of memberships) {
+    const key = membership.memberId.toString();
+    if (!latestByMember.has(key)) latestByMember.set(key, membership);
+  }
+
+  const latestMemberships = Array.from(latestByMember.values());
+  const memberIds = latestMemberships.map((membership) => membership.memberId);
+  const planIds = latestMemberships.map((membership) => membership.planId);
+  const [members, plans] = await Promise.all([
+    memberIds.length ? MemberModel.find(filters.filter({ _id: { $in: memberIds } })).lean() : [],
+    planIds.length ? MembershipPlanModel.find(filters.filter({ _id: { $in: planIds } })).lean<IMembershipPlan[]>() : [],
+  ]);
+
+  const memberMap = new Map(members.map((member) => [member._id.toString(), member]));
+  const planMap = new Map(plans.map((plan) => [plan._id.toString(), plan]));
+  const hydrated = latestMemberships.map((membership) => {
+    const member = memberMap.get(membership.memberId.toString());
+    const plan = planMap.get(membership.planId.toString());
+    return member && plan ? serialize(membership, member, plan, today) : null;
+  }).filter((item): item is ExpiryMembership => item !== null);
+
+  const inWindow = hydrated.filter((item) => item.daysLeft <= 30);
   const filtered = bucket ? inWindow.filter((item) => item.bucket === bucket) : inWindow;
-  const summary: ExpirySummary = { expired: inWindow.filter((item) => item.bucket === "EXPIRED").length, today: inWindow.filter((item) => item.bucket === "TODAY").length, threeDays: inWindow.filter((item) => item.bucket === "THREE_DAYS").length, sevenDays: inWindow.filter((item) => item.bucket === "SEVEN_DAYS").length, thirtyDays: inWindow.filter((item) => item.daysLeft >= 8 && item.daysLeft <= 30).length };
+  const summary: ExpirySummary = {
+    expired: inWindow.filter((item) => item.bucket === "EXPIRED").length,
+    today: inWindow.filter((item) => item.bucket === "TODAY").length,
+    threeDays: inWindow.filter((item) => item.bucket === "THREE_DAYS").length,
+    sevenDays: inWindow.filter((item) => item.bucket === "SEVEN_DAYS").length,
+    thirtyDays: inWindow.filter((item) => item.daysLeft >= 8 && item.daysLeft <= 30).length,
+  };
+
   return { memberships: filtered.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime()), summary };
 }
