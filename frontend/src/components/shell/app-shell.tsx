@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   ChevronDown,
   ChevronRight,
   Home,
@@ -15,7 +14,6 @@ import {
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +31,7 @@ import { GYM_NAV, SUPER_NAV, type NavItem } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import type { GymSummary, SessionUser } from "@/types";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const ROOT_HREFS = new Set(["/dashboard", "/super-admin"]);
 
@@ -258,7 +257,7 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f9f8] text-slate-900 lg:grid lg:grid-cols-[17.5rem_1fr]">
+    <div className="min-h-screen bg-[#f7f9f8] text-slate-900 dark:bg-slate-950 dark:text-slate-100 lg:grid lg:grid-cols-[17.5rem_1fr]">
       <aside className="sticky top-0 hidden h-screen flex-col overflow-hidden bg-[#101a2b] lg:flex">
         <div className="border-b border-white/[0.06] px-5 py-5">
           <Brand subtitle={subtitle} />
@@ -313,13 +312,13 @@ export function AppShell({
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 shadow-[0_1px_10px_rgba(15,23,42,0.03)] backdrop-blur-xl sm:gap-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 shadow-[0_1px_10px_rgba(15,23,42,0.03)] backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/85 dark:shadow-none sm:gap-4 sm:px-6 lg:px-8">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
+                className="h-10 w-10 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
                 aria-label="Open navigation"
                 data-testid="mobile-nav-trigger"
               >
@@ -351,29 +350,29 @@ export function AppShell({
           >
             <Link
               href={variant === "super" ? "/super-admin" : "/dashboard"}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
             >
               <Home className="h-4 w-4" />
             </Link>
             {breadcrumbs.slice(1).map((crumb, index) => (
               <React.Fragment key={`${crumb.label}-${index}`}>
-                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
                 {crumb.href ? (
                   <Link
                     href={crumb.href}
-                    className="hidden max-w-[180px] truncate text-xs font-medium text-slate-400 hover:text-slate-700 sm:block"
+                    className="hidden max-w-[180px] truncate text-xs font-medium text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 sm:block"
                   >
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="max-w-[190px] truncate rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">
+                  <span className="max-w-[190px] truncate rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
                     {crumb.label}
                   </span>
                 )}
               </React.Fragment>
             ))}
             {breadcrumbs.length === 1 ? (
-              <span className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">
+              <span className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
                 Dashboard
               </span>
             ) : null}
@@ -385,32 +384,24 @@ export function AppShell({
               <input
                 aria-label="Search"
                 placeholder="Search members, payments..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-xs text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-500/5"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3 text-xs text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200 dark:placeholder:text-slate-600 dark:focus:border-emerald-700 dark:focus:bg-slate-900"
               />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative h-10 w-10 rounded-xl text-slate-500 hover:bg-slate-100"
-              aria-label="Notifications"
-            >
-              <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute right-2 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
-            </Button>
-            <div className="hidden h-7 w-px bg-slate-200 sm:block" />
+            <ThemeToggle />
+            <div className="hidden h-7 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-xl px-1.5 py-1.5 transition-colors hover:bg-slate-50">
-                  <Avatar className="h-9 w-9 ring-1 ring-slate-200">
+                <button className="flex items-center gap-2 rounded-xl px-1.5 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <Avatar className="h-9 w-9 ring-1 ring-slate-200 dark:ring-slate-700">
                     <AvatarFallback className="bg-emerald-600 text-xs font-bold text-white">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden min-w-0 text-left lg:block">
-                    <p className="max-w-28 truncate text-xs font-semibold text-slate-800">
+                    <p className="max-w-28 truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
                       {user.name || user.email}
                     </p>
-                    <p className="mt-0.5 text-[10px] capitalize text-slate-400">
+                    <p className="mt-0.5 text-[10px] capitalize text-slate-400 dark:text-slate-500">
                       {user.role.replace("_", " ")}
                     </p>
                   </div>
@@ -419,10 +410,10 @@ export function AppShell({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-52 rounded-xl border-slate-200 bg-white p-1.5 shadow-xl"
+                className="w-52 rounded-xl border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
               >
                 <DropdownMenuItem
-                  className="cursor-pointer rounded-lg text-rose-500 focus:bg-rose-50 focus:text-rose-600"
+                  className="cursor-pointer rounded-lg text-rose-500 focus:bg-rose-50 focus:text-rose-600 dark:text-rose-400 dark:focus:bg-rose-950/30 dark:focus:text-rose-300"
                   onClick={logout}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
