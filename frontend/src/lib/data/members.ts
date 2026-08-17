@@ -1,5 +1,6 @@
 import "server-only";
 import { isValidObjectId } from "mongoose";
+import { connectToDatabase } from "@/lib/db";
 import { MemberModel, type IMember } from "@/models/member.model";
 import { MembershipModel } from "@/models/membership.model";
 import { MembershipPlanModel } from "@/models/membership-plan.model";
@@ -148,8 +149,7 @@ export async function listMembers(
     MembershipModel.distinct("memberId", filters.filter({})),
   ]);
 
-  // Hydrate the current page with at most two additional queries instead of
-  // one membership + one plan query for every member row.
+  // Bulk hydrate the current page instead of querying membership + plan per row.
   const memberIds = members.map((member) => member._id);
   const memberships = memberIds.length
     ? await MembershipModel.find(filters.filter({ memberId: { $in: memberIds } })).sort({ startDate: -1, endDate: -1, createdAt: -1 }).lean()
