@@ -1,6 +1,5 @@
 import "server-only";
 import { isValidObjectId } from "mongoose";
-import { connectToDatabase } from "@/lib/db";
 import { MemberModel, type IMember } from "@/models/member.model";
 import { MembershipModel } from "@/models/membership.model";
 import { MembershipPlanModel } from "@/models/membership-plan.model";
@@ -145,6 +144,7 @@ export async function listMembers(
     filters.count(MemberModel),
     filters.count(MemberModel, { status: MEMBER_STATUS.ACTIVE }),
     filters.count(MemberModel, { status: MEMBER_STATUS.FROZEN }),
+    filters.count(MemberModel, { status: MEMBER_STATUS.INACTIVE }),
     MembershipModel.distinct("memberId", filters.filter({})),
   ]);
 
