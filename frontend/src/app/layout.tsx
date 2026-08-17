@@ -3,6 +3,7 @@ import { Chivo, DM_Sans, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalRouteLoader } from "@/components/global-route-loader";
+import { SwrProvider } from "@/components/swr-provider";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
@@ -37,9 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           forcedTheme="light"
           disableTransitionOnChange
         >
-          <GlobalRouteLoader />
-          {children}
-          <Toaster position="top-right" richColors />
+          <SwrProvider>
+            <GlobalRouteLoader />
+            {children}
+            <Toaster position="top-right" richColors />
+          </SwrProvider>
         </ThemeProvider>
       </body>
     </html>
