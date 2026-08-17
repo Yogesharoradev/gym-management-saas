@@ -71,22 +71,33 @@ export function serializeMember(member: IMember, membership: SerializedMemberMem
   };
 }
 
-async function serializeMembership(gymId: string, membership: { _id: { toString(): string }; planId: unknown; startDate: Date; endDate: Date; amount: number; weightAtStart: number | null; status: MembershipStatus }): Promise<SerializedMemberMembership> {
-  const plan = await MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean();
+function serializeMembershipWithPlan(
+  membership: { _id: { toString(): string }; planId: unknown; startDate: Date; endDate: Date; amount: number; weightAtStart: number | null; status: MembershipStatus },
+  planName: string | undefined,
+): SerializedMemberMembership {
   const displayedStatus: MembershipStatus = membership.status === MEMBERSHIP_STATUS.CANCELLED
     ? MEMBERSHIP_STATUS.CANCELLED
     : membership.endDate < new Date()
       ? MEMBERSHIP_STATUS.EXPIRED
       : membership.status;
+
   return {
     id: membership._id.toString(),
-    plan: plan?.name ?? "Membership plan",
+    plan: planName ?? "Membership plan",
     startDate: membership.startDate.toISOString(),
     endDate: membership.endDate.toISOString(),
     amount: membership.amount,
     weightAtStart: membership.weightAtStart,
     status: displayedStatus,
   };
+}
+
+async function serializeMembership(
+  gymId: string,
+  membership: { _id: { toString(): string }; planId: unknown; startDate: Date; endDate: Date; amount: number; weightAtStart: number | null; status: MembershipStatus },
+): Promise<SerializedMemberMembership> {
+  const plan = await MembershipPlanModel.findOne(tenant(gymId).filter({ _id: membership.planId })).lean();
+  return serializeMembershipWithPlan(membership, plan?.name);
 }
 
 async function getMembership(gymId: string, memberId: string): Promise<SerializedMemberMembership | null> {
@@ -101,7 +112,12 @@ export async function getMemberProfileData(gymId: string, memberId: string): Pro
   const member = await MemberModel.findOne(tenant(gymId).filter({ _id: memberId })).lean<IMember>();
   if (!member) return null;
   const memberships = await MembershipModel.find(tenant(gymId).filter({ memberId })).sort({ startDate: -1, endDate: -1, createdAt: -1 }).lean();
-  const history = await Promise.all(memberships.map((membership) => serializeMembership(gymId, membership)));
+  const planIds = memberships.map((membership) => membership.planId);
+  const plans = planIds.length
+    ? await MembershipPlanModel.find(tenant(gymId).filter({ _id: { $in: planIds } })).lean()
+    : [];
+  const planMap = new Map(plans.map((plan) => [plan._id.toString(), plan.name]));
+  const history = memberships.map((membership) => serializeMembershipWithPlan(membership, planMap.get(membership.planId.toString())));
   return { member: serializeMember(member, history[0] ?? null), membershipHistory: history };
 }
 
@@ -129,11 +145,41 @@ export async function listMembers(
     filters.count(MemberModel),
     filters.count(MemberModel, { status: MEMBER_STATUS.ACTIVE }),
     filters.count(MemberModel, { status: MEMBER_STATUS.FROZEN }),
-    filters.count(MemberModel, { status: MEMBER_STATUS.INACTIVE }),
     MembershipModel.distinct("memberId", filters.filter({})),
   ]);
-  const serialized = await Promise.all(members.map(async (member) => serializeMember(member, await getMembership(gymId, member._id.toString()))));
-  return { members: serialized, total, page, pageSize, stats: { total, active, frozen, inactive, withMembership: memberIdsWithMembership.length } };
+
+  // Hydrate the current page with at most two additional queries instead of
+  // one membership + one plan query for every member row.
+  const memberIds = members.map((member) => member._id);
+  const memberships = memberIds.length
+    ? await MembershipModel.find(filters.filter({ memberId: { $in: memberIds } })).sort({ startDate: -1, endDate: -1, createdAt: -1 }).lean()
+    : [];
+  const latestMembershipByMember = new Map<string, (typeof memberships)[number]>();
+  for (const membership of memberships) {
+    const key = membership.memberId.toString();
+    if (!latestMembershipByMember.has(key)) latestMembershipByMember.set(key, membership);
+  }
+  const planIds = Array.from(latestMembershipByMember.values()).map((membership) => membership.planId);
+  const plans = planIds.length
+    ? await MembershipPlanModel.find(filters.filter({ _id: { $in: planIds } })).lean()
+    : [];
+  const planMap = new Map(plans.map((plan) => [plan._id.toString(), plan.name]));
+
+  const serialized = members.map((member) => {
+    const membership = latestMembershipByMember.get(member._id.toString());
+    return serializeMember(
+      member,
+      membership ? serializeMembershipWithPlan(membership, planMap.get(membership.planId.toString())) : null,
+    );
+  });
+
+  return {
+    members: serialized,
+    total,
+    page,
+    pageSize,
+    stats: { total, active, frozen, inactive, withMembership: memberIdsWithMembership.length },
+  };
 }
 
 export async function getMemberById(gymId: string, memberId: string): Promise<SerializedMember | null> {
