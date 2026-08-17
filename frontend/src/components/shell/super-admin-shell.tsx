@@ -24,6 +24,7 @@ import { SUPER_NAV, type NavItem } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/types";
 import { useLogout } from "@/lib/hooks/useLogout";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/super-admin") return pathname === href;
@@ -231,6 +232,7 @@ export function SuperAdminShell({
           </h1>
 
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
