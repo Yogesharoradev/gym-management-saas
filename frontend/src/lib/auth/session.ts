@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -136,7 +137,7 @@ export async function getSessionPayload(): Promise<TokenPayload | null> {
   return verifySessionToken(token);
 }
 
-export async function getAuthState(): Promise<AuthState | null> {
+export const getAuthState = cache(async (): Promise<AuthState | null> => {
   const payload = await getSessionPayload();
   if (!payload) return null;
 
@@ -180,7 +181,7 @@ export async function getAuthState(): Promise<AuthState | null> {
     },
     gym,
   };
-}
+});
 
 export function isSuperAdmin(role: Role): boolean {
   return role === ROLES.SUPER_ADMIN;
