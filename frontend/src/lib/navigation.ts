@@ -20,6 +20,7 @@ export const GYM_NAV: NavItem[] = [
   { label: "Members", href: "/members", icon: Users },
   { label: "Memberships", href: "/memberships", icon: CreditCard },
   { label: "Expiry", href: "/expiry", icon: Clock },
+  { label: "Reports", href: "/reports", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -93,6 +93,18 @@ export function ExpiryClient() {
   });
   const [saving, setSaving] = React.useState(false);
 
+  // Body scroll lock when renew dialog is open
+  React.useEffect(() => {
+    if (renewing) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [renewing]);
+
   React.useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
     return () => window.clearTimeout(timer);
@@ -118,8 +130,12 @@ export function ExpiryClient() {
     plans?: Plan[];
     error?: string;
   }>("/api/membership-plans", {
-    revalidateOnMount: false,
+    refreshInterval(latestData) {
+      return latestData ? 30000 : 0;
+    },
   });
+
+  console.log(plansData, "pelascne");
 
   const memberships = expiryData?.memberships ?? [];
   const summary = expiryData?.summary ?? {
@@ -506,57 +522,72 @@ export function ExpiryClient() {
           </>
         )}
       </Card>
+
+      {/* Renew Dialog - Fully Responsive */}
       {renewing ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 sm:p-5">
-          <Card className="flex h-[min(680px,calc(100vh-1.5rem))] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
-            <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-600">
-                  Membership renewal
-                </p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">
-                  Renew {renewing.member.name}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Create the next membership period without losing the previous
-                  history.
-                </p>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto h-full"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRenewing(null);
+          }}
+        >
+          <Card className="relative w-full max-w-2xl my-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20 max-h-[80vh] sm:max-h-[80vh] flex flex-col">
+            {/* Header - Sticky */}
+            <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-600">
+                    Membership renewal
+                  </p>
+                  <h2 className="mt-0.5 sm:mt-1 text-base sm:text-xl font-bold text-slate-950 truncate">
+                    Renew {renewing.member.name}
+                  </h2>
+                  <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500 truncate">
+                    Create the next membership period without losing the
+                    previous history.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRenewing(null)}
+                  className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors flex items-center justify-center"
+                >
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setRenewing(null)}
-                className="h-9 w-9 rounded-lg text-slate-400 hover:bg-slate-100"
-              >
-                <X className="mx-auto h-4 w-4" />
-              </button>
             </div>
+
+            {/* Form - Scrollable */}
             <form
               onSubmit={(event) => void renewMembership(event)}
-              className="min-h-0 flex-1 overflow-y-auto"
+              className="flex-1 overflow-y-auto"
             >
-              <div className="space-y-5 p-5 sm:p-6">
-                <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
+              <div className="space-y-4 sm:space-y-5 p-4 sm:p-6">
+                {/* Current Membership Info */}
+                <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-3 sm:p-4">
+                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-700">
                     Current membership
                   </p>
-                  <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="font-semibold text-slate-800">
+                  <div className="mt-1.5 sm:mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm sm:text-base font-semibold text-slate-800">
                       {renewing.plan.name}
                     </p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-xs sm:text-sm text-slate-500">
                       Ended {formatDate(renewing.endDate)}
                     </p>
                   </div>
                 </div>
+
+                {/* Plan Selection */}
                 <div>
-                  <label className="text-sm font-semibold text-slate-800">
+                  <label className="text-xs sm:text-sm font-semibold text-slate-800">
                     New membership plan
                   </label>
                   <select
                     required
                     value={form.planId}
                     onChange={(event) => changePlan(event.target.value)}
-                    className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                    className="mt-1.5 sm:mt-2 h-10 sm:h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs sm:text-sm outline-none focus:border-emerald-500"
                   >
                     {plans
                       .filter((plan) => plan.isActive)
@@ -567,19 +598,25 @@ export function ExpiryClient() {
                       ))}
                   </select>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+
+                {/* Date Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-semibold">Start date</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                      Start date
+                    </label>
                     <Input
                       required
                       type="date"
                       value={form.startDate}
                       onChange={(event) => changeStartDate(event.target.value)}
-                      className="mt-2 h-11 rounded-lg border-slate-200"
+                      className="mt-1.5 sm:mt-2 h-10 sm:h-11 rounded-lg border-slate-200 text-xs sm:text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold">End date</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                      End date
+                    </label>
                     <Input
                       required
                       type="date"
@@ -587,15 +624,19 @@ export function ExpiryClient() {
                       onChange={(event) =>
                         setForm({ ...form, endDate: event.target.value })
                       }
-                      className="mt-2 h-11 rounded-lg border-slate-200"
+                      className="mt-1.5 sm:mt-2 h-10 sm:h-11 rounded-lg border-slate-200 text-xs sm:text-sm"
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+
+                {/* Amount & Weight */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-semibold">Amount</label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                      Amount
+                    </label>
+                    <div className="relative mt-1.5 sm:mt-2">
+                      <IndianRupee className="absolute left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-slate-400" />
                       <Input
                         required
                         type="number"
@@ -604,12 +645,12 @@ export function ExpiryClient() {
                         onChange={(event) =>
                           setForm({ ...form, amount: event.target.value })
                         }
-                        className="mt-2 h-11 rounded-lg border-slate-200 pl-9"
+                        className="h-10 sm:h-11 w-full rounded-lg border-slate-200 pl-8 sm:pl-9 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold">
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
                       Starting weight{" "}
                       <span className="font-normal text-slate-400">
                         (optional)
@@ -624,39 +665,53 @@ export function ExpiryClient() {
                         setForm({ ...form, weightAtStart: event.target.value })
                       }
                       placeholder="e.g. 72.5"
-                      className="mt-2 h-11 rounded-lg border-slate-200"
+                      className="mt-1.5 sm:mt-2 h-10 sm:h-11 rounded-lg border-slate-200 text-xs sm:text-sm"
                     />
                   </div>
                 </div>
-                <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
-                  <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+
+                {/* Info Box */}
+                <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
+                  <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-emerald-600 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-800 break-words">
                       New period: {formatDate(form.startDate)} →{" "}
                       {formatDate(form.endDate)}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs leading-4 sm:leading-5 text-slate-500">
                       The end date is suggested from the selected plan. You can
                       adjust it before saving.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/70 p-4 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setRenewing(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={saving || !plans.some((plan) => plan.isActive)}
-                  type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  {saving ? "Renewing…" : "Renew membership"}
-                </Button>
+
+              {/* Footer - Sticky */}
+              <div className="sticky bottom-0 z-10 bg-white border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRenewing(null)}
+                    className="w-full sm:w-auto h-9 sm:h-10 rounded-xl text-xs sm:text-sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={saving || !plans.some((plan) => plan.isActive)}
+                    type="submit"
+                    className="w-full sm:w-auto h-9 sm:h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs sm:text-sm"
+                  >
+                    {saving ? (
+                      <>
+                        <span className="inline-block h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-1.5 sm:mr-2" />
+                        Renewing…
+                      </>
+                    ) : (
+                      "Renew membership"
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Card>
