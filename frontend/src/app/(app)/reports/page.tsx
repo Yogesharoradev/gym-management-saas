@@ -1,5 +1,12 @@
-import { ReportsClient } from "./_components/reports-client";
+import { BarChart3 } from "lucide-react";
+import { ComingSoon } from "@/components/coming-soon";
 
 export default function ReportsPage() {
-  return <ReportsClient />;
+  return (
+    <ComingSoon
+      icon={BarChart3}
+      title="Reports"
+      description="Analyse revenue, attendance trends and member growth with visual, exportable reports."
+    />
+  );
 }
