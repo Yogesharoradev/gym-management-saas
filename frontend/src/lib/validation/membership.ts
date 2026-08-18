@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { DURATION_UNIT, MEMBERSHIP_STATUS } from "@/lib/constants";
+import { DURATION_UNIT, MEMBERSHIP_STATUS, PAYMENT_METHOD } from "@/lib/constants";
+
+const paymentInputSchema = z.object({
+  amount: z.coerce.number().min(0, "Payment amount cannot be negative"),
+  method: z.nativeEnum(PAYMENT_METHOD),
+  paymentDate: z.string().optional(),
+  transactionReference: z.string().trim().max(120).default(""),
+  notes: z.string().trim().max(500).default(""),
+});
 
 export const membershipPlanSchema = z.object({
   name: z.string().trim().min(2, "Plan name is required").max(80),
@@ -19,6 +27,7 @@ export const membershipSchema = z.object({
   endDate: z.string().min(1, "End date is required"),
   amount: z.coerce.number().min(0, "Amount cannot be negative"),
   weightAtStart: z.union([z.coerce.number().min(0, "Weight cannot be negative"), z.null()]).default(null),
+  payment: paymentInputSchema.optional(),
 }).refine((value) => new Date(value.endDate) >= new Date(value.startDate), {
   message: "End date must be on or after start date",
   path: ["endDate"],
