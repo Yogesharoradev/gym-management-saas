@@ -23,6 +23,7 @@ import type {
   ExpirySummary,
 } from "@/lib/data/membership-expiry";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface Plan {
   id: string;
@@ -89,7 +90,12 @@ export function ExpiryClient() {
     startDate: todayInput(),
     endDate: todayInput(),
     amount: "",
+    paymentAmount: "",
     weightAtStart: "",
+    paymentMethod: "CASH",
+    paymentDate: todayInput(),
+    transactionReference: "",
+    paymentNotes: "",
   });
   const [saving, setSaving] = React.useState(false);
 
@@ -120,7 +126,6 @@ export function ExpiryClient() {
     data: expiryData,
     error: expiryError,
     isLoading: expiryLoading,
-    isValidating: expiryValidating,
     mutate: mutateExpiry,
   } = useSWR<ExpiryResponse>(expiryKey, {
     keepPreviousData: true,
@@ -135,8 +140,7 @@ export function ExpiryClient() {
     },
   });
 
-  console.log(plansData, "pelascne");
-
+  // Use memberships directly from expiry API - NO FILTERING
   const memberships = expiryData?.memberships ?? [];
   const summary = expiryData?.summary ?? {
     expired: 0,
@@ -163,13 +167,20 @@ export function ExpiryClient() {
       plans.find((plan) => plan.isActive && plan.id === membership.plan.id) ??
       plans.find((plan) => plan.isActive);
     const plan = activePlan ?? membership.plan;
+    const today = todayInput();
+
     setRenewing(membership);
     setForm({
       planId: plan.id,
       startDate: start,
       endDate: addDuration(start, plan.duration, plan.durationUnit),
       amount: String(plan.price),
+      paymentAmount: String(plan.price),
       weightAtStart: "",
+      paymentMethod: "CASH",
+      paymentDate: today,
+      transactionReference: "",
+      paymentNotes: "",
     });
   }
 
@@ -179,6 +190,7 @@ export function ExpiryClient() {
       ...current,
       planId,
       amount: plan ? String(plan.price) : current.amount,
+      paymentAmount: plan ? String(plan.price) : current.paymentAmount,
       endDate: plan
         ? addDuration(current.startDate, plan.duration, plan.durationUnit)
         : current.endDate,
@@ -211,6 +223,13 @@ export function ExpiryClient() {
           endDate: form.endDate,
           amount: Number(form.amount),
           weightAtStart: form.weightAtStart ? Number(form.weightAtStart) : null,
+          payment: {
+            amount: Number(form.paymentAmount),
+            method: form.paymentMethod,
+            paymentDate: form.paymentDate,
+            transactionReference: form.transactionReference.trim(),
+            notes: form.paymentNotes.trim(),
+          },
         }),
       });
       const data = (await response.json()) as { error?: string };
@@ -218,8 +237,13 @@ export function ExpiryClient() {
         throw new Error(data.error ?? "Unable to renew membership");
       setRenewing(null);
       await mutateExpiry();
+      toast.success(
+        `${renewing.member.name}'s membership renewed successfully`,
+      );
     } catch (err) {
-      console.log(err, "errror");
+      toast.error(
+        err instanceof Error ? err.message : "Unable to renew membership",
+      );
     } finally {
       setSaving(false);
     }
@@ -523,7 +547,7 @@ export function ExpiryClient() {
         )}
       </Card>
 
-      {/* Renew Dialog - Fully Responsive */}
+      {/* Renew Dialog */}
       {renewing ? (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto h-full"
@@ -532,7 +556,7 @@ export function ExpiryClient() {
           }}
         >
           <Card className="relative w-full max-w-2xl my-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20 max-h-[80vh] sm:max-h-[80vh] flex flex-col">
-            {/* Header - Sticky */}
+            {/* Header */}
             <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -557,7 +581,7 @@ export function ExpiryClient() {
               </div>
             </div>
 
-            {/* Form - Scrollable */}
+            {/* Form */}
             <form
               onSubmit={(event) => void renewMembership(event)}
               className="flex-1 overflow-y-auto"
@@ -633,7 +657,7 @@ export function ExpiryClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="text-xs sm:text-sm font-semibold text-slate-800">
-                      Amount
+                      Membership amount
                     </label>
                     <div className="relative mt-1.5 sm:mt-2">
                       <IndianRupee className="absolute left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-slate-400" />
@@ -642,12 +666,13 @@ export function ExpiryClient() {
                         type="number"
                         min="0"
                         value={form.amount}
-                        onChange={(event) =>
-                          setForm({ ...form, amount: event.target.value })
-                        }
-                        className="h-10 sm:h-11 w-full rounded-lg border-slate-200 pl-8 sm:pl-9 text-xs sm:text-sm"
+                        readOnly
+                        className="h-10 sm:h-11 w-full rounded-lg border-slate-200 pl-8 sm:pl-9 text-xs sm:text-sm bg-slate-50 cursor-not-allowed"
                       />
                     </div>
+                    <p className="mt-1 text-[10px] sm:text-xs text-slate-400">
+                      Total value of this membership (auto-filled from plan)
+                    </p>
                   </div>
                   <div>
                     <label className="text-xs sm:text-sm font-semibold text-slate-800">
@@ -670,6 +695,121 @@ export function ExpiryClient() {
                   </div>
                 </div>
 
+                {/* Payment Details */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4">
+                  <div className="mb-3 sm:mb-4">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      Payment details
+                    </h3>
+                    <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
+                      Record the payment received for this renewal.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Amount received
+                      </label>
+                      <div className="relative mt-1.5 sm:mt-2">
+                        <IndianRupee className="absolute left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          required
+                          type="number"
+                          min="0"
+                          value={form.paymentAmount}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              paymentAmount: event.target.value,
+                            })
+                          }
+                          className="h-10 sm:h-11 w-full rounded-lg border-slate-200 pl-8 sm:pl-9 text-xs sm:text-sm"
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] sm:text-xs text-slate-400">
+                        Actual payment received (can be partial)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Payment method
+                      </label>
+                      <select
+                        required
+                        value={form.paymentMethod}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            paymentMethod: event.target.value,
+                          })
+                        }
+                        className="mt-1.5 sm:mt-2 h-10 sm:h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs sm:text-sm outline-none focus:border-emerald-500"
+                      >
+                        <option value="CASH">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="CARD">Card</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Payment date
+                      </label>
+                      <Input
+                        required
+                        type="date"
+                        value={form.paymentDate}
+                        onChange={(event) =>
+                          setForm({ ...form, paymentDate: event.target.value })
+                        }
+                        className="mt-1.5 sm:mt-2 h-10 sm:h-11 rounded-lg border-slate-200 text-xs sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 sm:mt-4">
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                      Transaction reference{" "}
+                      <span className="font-normal text-slate-400">
+                        (optional)
+                      </span>
+                    </label>
+                    <Input
+                      value={form.transactionReference}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          transactionReference: event.target.value,
+                        })
+                      }
+                      placeholder="e.g. UPI transaction ID"
+                      className="mt-1.5 sm:mt-2 h-10 sm:h-11 rounded-lg border-slate-200 text-xs sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="mt-3 sm:mt-4">
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800">
+                      Payment notes{" "}
+                      <span className="font-normal text-slate-400">
+                        (optional)
+                      </span>
+                    </label>
+                    <textarea
+                      value={form.paymentNotes}
+                      onChange={(event) =>
+                        setForm({ ...form, paymentNotes: event.target.value })
+                      }
+                      placeholder="Add any payment notes..."
+                      rows={2}
+                      className="mt-1.5 sm:mt-2 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+                    />
+                  </div>
+                </section>
+
                 {/* Info Box */}
                 <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
                   <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-emerald-600 mt-0.5" />
@@ -686,7 +826,7 @@ export function ExpiryClient() {
                 </div>
               </div>
 
-              {/* Footer - Sticky */}
+              {/* Footer */}
               <div className="sticky bottom-0 z-10 bg-white border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
                 <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3">
                   <Button
