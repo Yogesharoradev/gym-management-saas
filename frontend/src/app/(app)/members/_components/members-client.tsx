@@ -63,6 +63,7 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
   const [query, setQuery] = React.useState("");
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [status, setStatus] = React.useState<Filter>("ALL");
+  const [viewMode, setViewMode] = React.useState<"table" | "card">("table");
   const [page, setPage] = React.useState(1);
   const [error, setError] = React.useState<string | null>(null);
   const [menuId, setMenuId] = React.useState<string | null>(null);
@@ -267,24 +268,50 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
                 </button>
               ) : null}
             </div>
-            <div className="flex w-full overflow-x-auto rounded-xl bg-slate-100 p-1 lg:w-auto">
-              {(["ALL", "ACTIVE", "FROZEN", "INACTIVE"] as Filter[]).map(
-                (item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      setPage(1);
-                      setStatus(item);
-                    }}
-                    className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${status === item ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-700"}`}
-                  >
-                    {item === "ALL"
-                      ? "All"
-                      : item.charAt(0) + item.slice(1).toLowerCase()}
-                  </button>
-                ),
-              )}
+            <div className="flex w-full items-center gap-2 lg:w-auto">
+              <div className="flex flex-1 overflow-x-auto rounded-xl bg-slate-100 p-1 lg:flex-none">
+                {(["ALL", "ACTIVE", "FROZEN", "INACTIVE"] as Filter[]).map(
+                  (item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        setPage(1);
+                        setStatus(item);
+                      }}
+                      className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${status === item ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-700"}`}
+                    >
+                      {item === "ALL"
+                        ? "All"
+                        : item.charAt(0) + item.slice(1).toLowerCase()}
+                    </button>
+                  ),
+                )}
+              </div>
+              <div className="flex shrink-0 rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                    viewMode === "table"
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-400 hover:text-slate-700"
+                  }`}
+                >
+                  Table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("card")}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                    viewMode === "card"
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-400 hover:text-slate-700"
+                  }`}
+                >
+                  Cards
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -332,7 +359,11 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div
+              className={
+                viewMode === "table" ? "block overflow-x-auto" : "hidden"
+              }
+            >
               <table className="w-full min-w-[850px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
@@ -423,7 +454,13 @@ export function MembersClient({ actions }: { actions?: React.ReactNode }) {
                 </tbody>
               </table>
             </div>
-            <div className="divide-y divide-slate-100 md:hidden">
+            <div
+              className={
+                viewMode === "card"
+                  ? "block divide-y divide-slate-100"
+                  : "hidden"
+              }
+            >
               {members.map((member) => (
                 <div key={member.id} className="p-4">
                   <div className="flex items-start gap-3">

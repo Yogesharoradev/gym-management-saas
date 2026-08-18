@@ -22,6 +22,7 @@ import type {
   ExpiryMembership,
   ExpirySummary,
 } from "@/lib/data/membership-expiry";
+import Link from "next/link";
 
 interface Plan {
   id: string;
@@ -264,14 +265,14 @@ export function ExpiryClient() {
               every membership lifecycle visible.
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="w-full rounded-xl border-emerald-200 bg-white/80 sm:w-auto"
-          >
-            <a href="/memberships">
+          <Link href="/memberships">
+            <Button
+              variant="outline"
+              className="w-full rounded-xl border-emerald-200 bg-white/80 sm:w-auto flex gap-1"
+            >
               Manage memberships <ChevronRight className="ml-1 h-4 w-4" />
-            </a>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </section>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">

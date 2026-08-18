@@ -73,34 +73,36 @@ export default async function MemberDetailsPage({ params }: PageProps) {
   const isCurrentMembershipExpired = currentMembership?.status === "EXPIRED";
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 pb-8 sm:space-y-7">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-10 w-10 shrink-0 rounded-xl border-slate-200 bg-white shadow-sm"
-        >
-          <Link href="/members" aria-label="Back to members">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600">
-            Member profile
-          </p>
-          <h1 className="mt-1 truncate font-heading text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-            {member.name}
-          </h1>
+    <div className="mx-auto max-w-8xl space-y-5 pb-8 sm:space-y-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 shrink-0 rounded-xl border-slate-200 bg-white shadow-sm"
+          >
+            <Link href="/members" aria-label="Back to members">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600">
+              Member profile
+            </p>
+            <h1 className="mt-1 truncate font-heading text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+              {member.name}
+            </h1>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          className="ml-auto h-10 rounded-xl border-slate-200 bg-white"
-        >
-          <Link href={`/members/${member.id}/edit`}>
+        <Link href={`/members/${member.id}/edit`}>
+          <Button
+            variant="outline"
+            className="ml-auto h-10 rounded-xl border-slate-200 bg-white"
+          >
             <Edit3 className="mr-1.5 h-4 w-4 text-blue-500" />
             Edit profile
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       <section className="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/70 to-cyan-50/70 p-5 shadow-[0_18px_50px_rgba(16,185,129,0.08)] sm:p-7 lg:p-8">
