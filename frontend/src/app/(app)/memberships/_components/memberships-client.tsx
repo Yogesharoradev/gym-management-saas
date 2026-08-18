@@ -26,6 +26,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import { toast } from "sonner"; // or your preferred toast library
 
 interface Plan {
   id: string;
@@ -213,7 +214,14 @@ export function MembershipsClient() {
     startDate: dateInput(new Date()),
     endDate: dateInput(new Date()),
     amount: "",
+    paymentAmount: "",
     weightAtStart: "",
+
+    // Payment details
+    paymentMethod: "CASH",
+    paymentDate: dateInput(new Date()),
+    transactionReference: "",
+    paymentNotes: "",
   });
   const [editForm, setEditForm] = React.useState({
     planId: "",
@@ -266,6 +274,15 @@ export function MembershipsClient() {
     revalidateOnFocus: false,
   });
 
+  // Fetch ALL memberships to know which members already have active memberships
+  const { data: allMembershipsData } = useSWR<MembershipResponse>(
+    "/api/memberships?pageSize=1000",
+    fetcher,
+    {
+      revalidateOnFocus: false,
+    },
+  );
+
   const memberKey = React.useMemo(() => {
     if (!assignOpen) return null;
 
@@ -289,6 +306,7 @@ export function MembershipsClient() {
   const memberships = membershipData?.memberships ?? [];
   const plans = plansData?.plans ?? [];
   const members = membersData?.members ?? [];
+  const allMemberships = allMembershipsData?.memberships ?? [];
   const stats = membershipData?.stats ?? {
     total: 0,
     active: 0,
@@ -308,6 +326,28 @@ export function MembershipsClient() {
       );
     }
   }, [membershipError, plansError, membersError]);
+
+  // Get IDs of members who already have active memberships
+  const activeMemberIds = React.useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return new Set(
+      allMemberships
+        .filter((m) => {
+          const status = m.status;
+          // Check if membership is active or expiring (not expired or cancelled)
+          return (
+            status === MEMBERSHIP_STATUS.ACTIVE ||
+            status === MEMBERSHIP_STATUS.EXPIRED
+          );
+        })
+        .map((m) => m.member.id),
+    );
+  }, [allMemberships]);
+
+  // Filter members to exclude those with active memberships
+  const availableMembers = React.useMemo(() => {
+    return members.filter((member) => !activeMemberIds.has(member.id));
+  }, [members, activeMemberIds]);
 
   function openPlan(plan?: Plan): void {
     setEditingPlan(plan ?? null);
@@ -333,7 +373,9 @@ export function MembershipsClient() {
   function openAssign(): void {
     const first = plans.find((plan) => plan.isActive);
     const start = dateInput(new Date());
+
     setMemberQuery("");
+
     setAssignForm({
       memberId: "",
       planId: first?.id ?? "",
@@ -342,8 +384,15 @@ export function MembershipsClient() {
         ? addDuration(start, first.duration, first.durationUnit)
         : start,
       amount: first ? String(first.price) : "",
+      paymentAmount: first ? String(first.price) : "",
       weightAtStart: "",
+
+      paymentMethod: "CASH",
+      paymentDate: dateInput(new Date()),
+      transactionReference: "",
+      paymentNotes: "",
     });
+
     setAssignOpen(true);
   }
   function openEditMembership(membership: Membership): void {
@@ -366,6 +415,7 @@ export function MembershipsClient() {
       ...current,
       planId,
       amount: plan ? String(plan.price) : "",
+      paymentAmount: plan ? String(plan.price) : "",
       endDate: plan
         ? addDuration(current.startDate, plan.duration, plan.durationUnit)
         : current.endDate,
@@ -393,7 +443,6 @@ export function MembershipsClient() {
   async function savePlan(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     setSaving(true);
-    setError(null);
     try {
       const body = {
         name: planForm.name,
@@ -417,8 +466,11 @@ export function MembershipsClient() {
       if (!response.ok) throw new Error(data.error ?? "Unable to save plan");
       await mutatePlans();
       setPlanOpen(false);
+      toast.success(
+        editingPlan ? "Plan updated successfully" : "Plan created successfully",
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save plan");
+      toast.error(err instanceof Error ? err.message : "Unable to save plan");
     } finally {
       setSaving(false);
     }
@@ -426,26 +478,46 @@ export function MembershipsClient() {
   async function assignMembership(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     setSaving(true);
-    setError(null);
+
     try {
       const response = await fetch("/api/memberships", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          ...assignForm,
+          memberId: assignForm.memberId,
+          planId: assignForm.planId,
+          startDate: assignForm.startDate,
+          endDate: assignForm.endDate,
           amount: Number(assignForm.amount),
           weightAtStart: assignForm.weightAtStart
             ? Number(assignForm.weightAtStart)
             : null,
+
+          payment: {
+            amount: Number(assignForm.paymentAmount),
+            method: assignForm.paymentMethod,
+            paymentDate: assignForm.paymentDate,
+            transactionReference: assignForm.transactionReference.trim(),
+            notes: assignForm.paymentNotes.trim(),
+          },
         }),
       });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok)
+
+      const data = (await response.json()) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
         throw new Error(data.error ?? "Unable to assign membership");
+      }
+
       await mutateMemberships();
       setAssignOpen(false);
+      toast.success("Membership assigned successfully");
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Unable to assign membership",
       );
     } finally {
@@ -456,7 +528,6 @@ export function MembershipsClient() {
     event.preventDefault();
     if (!editingMembership) return;
     setSaving(true);
-    setError(null);
     try {
       const response = await fetch(`/api/memberships/${editingMembership.id}`, {
         method: "PATCH",
@@ -478,8 +549,9 @@ export function MembershipsClient() {
       await mutateMemberships();
       setEditOpen(false);
       setEditingMembership(null);
+      toast.success("Membership updated successfully");
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Unable to update membership",
       );
     } finally {
@@ -487,19 +559,31 @@ export function MembershipsClient() {
     }
   }
   async function togglePlan(plan: Plan): Promise<void> {
-    const response = await fetch(`/api/membership-plans/${plan.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !plan.isActive }),
-    });
-    if (response.ok) await mutatePlans();
+    try {
+      const response = await fetch(`/api/membership-plans/${plan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !plan.isActive }),
+      });
+      if (response.ok) {
+        await mutatePlans();
+        toast.success(
+          `Plan ${plan.isActive ? "paused" : "activated"} successfully`,
+        );
+      }
+    } catch (err) {
+      toast.error("Unable to update plan status");
+    }
   }
 
   const pages = Math.max(1, Math.ceil(stats.total / 12));
   const activePlans = plans.filter((plan) => plan.isActive);
   const selectedMember =
-    members.find((member) => member.id === assignForm.memberId) ?? null;
-  const filteredMembers = memberQuery.trim() ? members : members.slice(0, 6);
+    availableMembers.find((member) => member.id === assignForm.memberId) ??
+    null;
+  const filteredMembers = memberQuery.trim()
+    ? availableMembers
+    : availableMembers.slice(0, 6);
   const editPlans =
     editingMembership &&
     !editingMembership.plan.isActive &&
@@ -1047,10 +1131,17 @@ export function MembershipsClient() {
                         ))
                       ) : (
                         <p className="p-4 text-center text-xs text-slate-400">
-                          No members found.
+                          {memberQuery.trim()
+                            ? "No available members found"
+                            : "No members available to assign"}
                         </p>
                       )}
                     </div>
+                  )}
+                  {availableMembers.length === 0 && !selectedMember && (
+                    <p className="mt-2 text-xs text-amber-600">
+                      All members already have active memberships
+                    </p>
                   )}
                 </section>
                 <div>
@@ -1105,18 +1196,19 @@ export function MembershipsClient() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-semibold text-slate-800">
-                      Amount
+                      Membership amount
                     </label>
                     <Input
                       required
                       type="number"
                       min="0"
                       value={assignForm.amount}
-                      onChange={(e) =>
-                        setAssignForm({ ...assignForm, amount: e.target.value })
-                      }
-                      className={field}
+                      readOnly
+                      className={`${field} bg-slate-50 cursor-not-allowed`}
                     />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Total value of this membership (auto-filled from plan)
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-800">
@@ -1141,6 +1233,7 @@ export function MembershipsClient() {
                     />
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3 rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
                   <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                   <div>
@@ -1152,6 +1245,128 @@ export function MembershipsClient() {
                     </p>
                   </div>
                 </div>
+
+                {/* Payment Details */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-slate-800">
+                      Payment details
+                    </h3>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Record the payment received for this membership.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-semibold text-slate-800">
+                        Amount received
+                      </label>
+                      <Input
+                        required
+                        type="number"
+                        min="0"
+                        value={assignForm.paymentAmount}
+                        onChange={(e) =>
+                          setAssignForm({
+                            ...assignForm,
+                            paymentAmount: e.target.value,
+                          })
+                        }
+                        className={field}
+                      />
+                      <p className="mt-1 text-xs text-slate-400">
+                        Actual payment received (can be partial)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-slate-800">
+                        Payment method
+                      </label>
+
+                      <select
+                        required
+                        value={assignForm.paymentMethod}
+                        onChange={(e) =>
+                          setAssignForm({
+                            ...assignForm,
+                            paymentMethod: e.target.value,
+                          })
+                        }
+                        className={field}
+                      >
+                        <option value="CASH">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="CARD">Card</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-slate-800">
+                        Payment date
+                      </label>
+
+                      <Input
+                        required
+                        type="date"
+                        value={assignForm.paymentDate}
+                        onChange={(e) =>
+                          setAssignForm({
+                            ...assignForm,
+                            paymentDate: e.target.value,
+                          })
+                        }
+                        className={field}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="text-sm font-semibold text-slate-800">
+                      Transaction reference{" "}
+                      <span className="font-normal text-slate-400">
+                        (optional)
+                      </span>
+                    </label>
+
+                    <Input
+                      value={assignForm.transactionReference}
+                      onChange={(e) =>
+                        setAssignForm({
+                          ...assignForm,
+                          transactionReference: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. UPI transaction ID"
+                      className={field}
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="text-sm font-semibold text-slate-800">
+                      Payment notes{" "}
+                      <span className="font-normal text-slate-400">
+                        (optional)
+                      </span>
+                    </label>
+
+                    <textarea
+                      value={assignForm.paymentNotes}
+                      onChange={(e) =>
+                        setAssignForm({
+                          ...assignForm,
+                          paymentNotes: e.target.value,
+                        })
+                      }
+                      placeholder="Add any payment notes..."
+                      rows={3}
+                      className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+                    />
+                  </div>
+                </section>
               </div>
               <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:justify-end">
                 <Button
