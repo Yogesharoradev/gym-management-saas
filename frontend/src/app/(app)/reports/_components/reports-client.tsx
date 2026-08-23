@@ -44,6 +44,8 @@ interface ResponseData {
   error?: string;
 }
 
+type RangePreset = "THIS_MONTH" | "LAST_MONTH" | "LAST_3_MONTHS" | "THIS_YEAR" | "CUSTOM";
+
 const fetcher = async (url: string): Promise<ResponseData> => {
   const response = await fetch(url);
   const data = (await response.json()) as ResponseData;
@@ -62,6 +64,14 @@ function dateInput(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
 function formatDay(value: string): string {
@@ -88,14 +98,38 @@ function methodLabel(value: string): string {
 
 export function ReportsClient() {
   const today = React.useMemo(() => new Date(), []);
-  const defaultFrom = React.useMemo(() => {
-    const value = new Date(today);
-    value.setDate(value.getDate() - 29);
-    return dateInput(value);
-  }, [today]);
+  const [preset, setPreset] = React.useState<RangePreset>("THIS_MONTH");
+
+  const defaultFrom = React.useMemo(() => dateInput(startOfMonth(today)), [today]);
   const defaultTo = React.useMemo(() => dateInput(today), [today]);
   const [from, setFrom] = React.useState(defaultFrom);
   const [to, setTo] = React.useState(defaultTo);
+
+  const applyPreset = React.useCallback(
+    (nextPreset: RangePreset): void => {
+      setPreset(nextPreset);
+
+      if (nextPreset === "CUSTOM") return;
+
+      const current = new Date(today);
+      let nextFrom = startOfMonth(current);
+      let nextTo = current;
+
+      if (nextPreset === "LAST_MONTH") {
+        const previous = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+        nextFrom = startOfMonth(previous);
+        nextTo = endOfMonth(previous);
+      } else if (nextPreset === "LAST_3_MONTHS") {
+        nextFrom = new Date(current.getFullYear(), current.getMonth() - 2, 1);
+      } else if (nextPreset === "THIS_YEAR") {
+        nextFrom = new Date(current.getFullYear(), 0, 1);
+      }
+
+      setFrom(dateInput(nextFrom));
+      setTo(dateInput(nextTo));
+    },
+    [today],
+  );
 
   const key = `/api/reports?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
   const { data, error, isLoading, isValidating, mutate } = useSWR<ResponseData>(key, fetcher, {
@@ -110,6 +144,13 @@ export function ReportsClient() {
     { label: "Outstanding", value: money.format(report?.outstanding ?? 0), icon: TrendingUp },
   ];
 
+  const presetOptions: Array<{ value: Exclude<RangePreset, "CUSTOM">; label: string }> = [
+    { value: "THIS_MONTH", label: "This Month" },
+    { value: "LAST_MONTH", label: "Last Month" },
+    { value: "LAST_3_MONTHS", label: "Last 3 Months" },
+    { value: "THIS_YEAR", label: "This Year" },
+  ];
+
   return (
     <div className="space-y-6 sm:space-y-7">
       <section className="rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/70 to-cyan-50/70 p-5 shadow-[0_18px_50px_rgba(16,185,129,0.08)] sm:p-7">
@@ -121,19 +162,74 @@ export function ReportsClient() {
             <h1 className="font-heading text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Reports</h1>
             <p className="mt-2 text-sm text-slate-500">Track actual payments received, revenue, outstanding dues and collections.</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-slate-500">From</label>
-              <Input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} className="h-10 rounded-xl bg-white" />
+
+          <div className="space-y-2">
+            <div className="flex w-full max-w-full overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm lg:justify-end">
+              {presetOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => applyPreset(option.value)}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:px-3.5 ${
+                    preset === option.value
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => applyPreset("CUSTOM")}
+                className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:px-3.5 ${
+                  preset === "CUSTOM"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }`}
+              >
+                Custom
+              </button>
             </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold text-slate-500">To</label>
-              <Input type="date" value={to} min={from} max={dateInput(today)} onChange={(event) => setTo(event.target.value)} className="h-10 rounded-xl bg-white" />
-            </div>
-            <Button variant="outline" onClick={() => void mutate()} disabled={isValidating} className="h-10 rounded-xl bg-white">
-              <RefreshCw className={`mr-2 h-4 w-4 ${isValidating ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+
+            {preset === "CUSTOM" ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-end">
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-500">From</label>
+                  <Input
+                    type="date"
+                    value={from}
+                    max={to}
+                    onChange={(event) => setFrom(event.target.value)}
+                    className="h-10 rounded-xl bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-500">To</label>
+                  <Input
+                    type="date"
+                    value={to}
+                    min={from}
+                    max={dateInput(today)}
+                    onChange={(event) => setTo(event.target.value)}
+                    className="h-10 rounded-xl bg-white"
+                  />
+                </div>
+                <Button variant="outline" onClick={() => void mutate()} disabled={isValidating} className="h-10 rounded-xl bg-white">
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isValidating ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-end gap-2 text-[11px] text-slate-400">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {from} → {to}
+                <Button variant="ghost" size="sm" onClick={() => void mutate()} disabled={isValidating} className="h-7 rounded-lg px-2 text-slate-500">
+                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isValidating ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </section>
