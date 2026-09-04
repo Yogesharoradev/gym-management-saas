@@ -34,7 +34,6 @@ function buildPdf(data: NonNullable<Awaited<ReturnType<typeof getReceiptData>>>)
     commands.push(`${x} ${y} ${width} ${height} re f`);
   };
 
-  // Clean Fitaah green accent + soft neutral receipt layout.
   commands.push("0.5 w");
   commands.push("0.90 0.95 0.93 rg");
   fillRect(50, 742, 495, 50);
@@ -135,11 +134,12 @@ export async function GET(
   if (!data) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
 
   const pdf = buildPdf(data);
+  const safeMemberName = data.member.name.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "Member";
   return new NextResponse(pdf as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${data.receiptNumber}.pdf"`,
+      "Content-Disposition": `attachment; filename="${safeMemberName}-${data.receiptNumber}.pdf"`,
       "Cache-Control": "no-store",
     },
   });
