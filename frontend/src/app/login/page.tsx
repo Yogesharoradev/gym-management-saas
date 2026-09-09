@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldCheck, TrendingUp, Users, Dumbbell, ArrowRight, Sparkles } from "lucide-react";
 import { Brand } from "@/components/brand";
@@ -109,7 +110,7 @@ export default async function LoginPage() {
             </div>
 
             <p className="mt-5 text-center text-[11px] leading-5 text-white/20">
-              By signing in, you agree to our <a href="#" className="text-white/40 transition-colors hover:text-white/70">Terms</a> and <a href="#" className="text-white/40 transition-colors hover:text-white/70">Privacy Policy</a>.
+              By signing in, you agree to our <Link href="/terms" className="text-white/40 transition-colors hover:text-white/70">Terms</Link> and <Link href="/privacy" className="text-white/40 transition-colors hover:text-white/70">Privacy Policy</Link>.
             </p>
           </div>
 
