@@ -76,7 +76,7 @@ export async function saveGymWhatsAppConfig(input: {
   }
 
   if (input.enabled) {
-    const existing = await GymWhatsAppConfigModel.findOne({ gymId })
+    const existing = await GymWhatsAppConfigModel.findOne({ gymId: input.gymId })
       .select("accessToken")
       .lean();
 
@@ -86,7 +86,7 @@ export async function saveGymWhatsAppConfig(input: {
   }
 
   const config = await GymWhatsAppConfigModel.findOneAndUpdate(
-    { gymId },
+    { gymId: input.gymId },
     { $set: update },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   )
