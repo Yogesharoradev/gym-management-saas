@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,6 +93,16 @@ export function GymDetailActions({
             Edit Gym
           </Button>
         </Link>
+        <Link href={`/super-admin/gyms/${gymId}/whatsapp`}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-4 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5"
+          >
+            <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+            WhatsApp
+          </Button>
+        </Link>
         {isSuspended ? (
           <Button
             size="sm"
@@ -113,7 +124,6 @@ export function GymDetailActions({
         )}
       </div>
 
-      {/* ─── Beautiful Dialog ─── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md border-0 shadow-2xl p-0 overflow-hidden">
           <div
