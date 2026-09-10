@@ -14,7 +14,6 @@ import { requireGymContext } from "@/lib/auth/guards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { WhatsAppSettings } from "./_components/whatsapp-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +69,7 @@ export default async function SettingsPage() {
               Settings & Configuration
             </h1>
             <p className="mt-2.5 max-w-xl text-sm leading-6 text-slate-500">
-              Manage your gym profile, WhatsApp connection, and operational
-              settings in one place.
+              Manage your gym profile and operational settings in one place.
             </p>
           </div>
           <Badge
@@ -82,8 +80,6 @@ export default async function SettingsPage() {
           </Badge>
         </div>
       </section>
-
-      <WhatsAppSettings />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 overflow-hidden rounded-[1.5rem] border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
