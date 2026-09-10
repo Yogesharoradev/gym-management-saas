@@ -17,10 +17,6 @@ export interface IGym {
   subscriptionStatus: SubscriptionStatus;
   subscriptionStartDate: Date | null;
   subscriptionEndDate: Date | null;
-  whatsappEnabled: boolean;
-  whatsappPhoneNumberId: string;
-  whatsappBusinessAccountId: string;
-  whatsappAccessToken: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,10 +42,6 @@ const gymSchema = new Schema<IGym>(
     },
     subscriptionStartDate: { type: Date, default: null },
     subscriptionEndDate: { type: Date, default: null },
-    whatsappEnabled: { type: Boolean, default: false },
-    whatsappPhoneNumberId: { type: String, default: "" },
-    whatsappBusinessAccountId: { type: String, default: "" },
-    whatsappAccessToken: { type: String, default: "" },
   },
   { timestamps: true },
 );
